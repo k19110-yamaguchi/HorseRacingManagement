@@ -2,7 +2,10 @@
 
 ## 利用方法
 - ターミナルでHorseRacingManagement/nodejsまで移動
-- コマンド「npm start」で起動
+- 以下のコマンドで起動
+```
+npm start
+```
 - 検索エンジンで「 http://localhost:3000/ 」でログイン画面へ
 
 ## やること
