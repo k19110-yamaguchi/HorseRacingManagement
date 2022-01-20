@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Xcontent-type" content="text/html">    
+    <title><%= title %></title>
+    <link rel='stylesheet' 
+    href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' 
+    crossorigin="anonymous"/>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="conteiner">
+        <header>
+            <h1 class="display-4">
+                <%= title %>
+            </h1>            
+        </header>
+        <div role="main">
+            <p><%- content %></p>
+            <form method="post" action="/users">
+                <div class="form-group">
+                    <label for="name">名前</label>
+                    <input type="text" name="name" id="name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="pass">パスワード</label>
+                    <input type="password" name="pass" id="pass" class="form-control">
+                </div>
+                <input type="submit" value="ログイン" class="btn btn-primary">
+            </form>
+            <p class="mt-4">                
+                <a href="/users/add">アカウントの新規作成&gt;&gt;</a>
+            </p>
+        </div>    
+</body>
+</html>

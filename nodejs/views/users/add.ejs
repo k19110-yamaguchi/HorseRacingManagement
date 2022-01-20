@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Xcontent-type" content="text/html">    
+    <title><%= title %></title>
+    <link rel='stylesheet' 
+    href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' 
+    crossorigin="anonymous"/>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="conteiner">
+        <header>
+            <h1 class="display-4">
+                <%= title %>
+            </h1>            
+        </header>
+        <div role="main">
+            <ol class="text-danger">
+                <% 
+                    if(err1 != null){ 
+                        for(let i in err1.errors){ 
+                %>
+                    <li><%= err1.errors[i].message %></li>
+                <% 
+                        }
+                    }
+                    if(err2 != null){                
+                %>
+                        <li><%= err2 %></li>
+                <%  
+                    } 
+                %>
+            </ol>
+            <form method="post" action="/users/add">
+                <div class="form-group">
+                    <label for="name">名前</label>
+                    <input type="text" name="name" id="name" value="<%= form.name %>" class="form-control">
+                    <ul class="text-danger">
+                        <% if(err1!= null){for(let i in err1.get("name")){ %>
+                            <li><%= err1.get("name")[i].message %></li>
+                        <% }} %>
+                    </ul>
+                </div>  
+                <div class="form-group">
+                    <label for="pass">パスワード</label>
+                    <input type="password" name="pass1" id="pass1" value="<%= form.pass %>" class="form-control">
+                    <ul class="text-danger">
+                        <% if(err1!= null){for(let i in err1.get("pass")){ %>
+                            <li><%= err1.get("pass")[i].message %></li>
+                        <% }} %>
+                    </ul>
+                </div>  
+                <div class="form-group">
+                    <label for="pass">パスワード(確認)</label>
+                    <input type="password" name="pass2" id="pass2" value="<%= form.pass %>" class="form-control">
+                    <ul class="text-danger">
+                        <% if(err2 != null){ %>
+                            <li><%= err2 %></li>
+                        <% } %>
+                    </ul>
+                </div>  
+                <input type="submit" value="作成" class="btn btn-primary">       
+            </form>            
+            <p class="mt-4">
+                <a href="/">&lt;&lt; ログイン画面へ戻る</a>             
+            </p>
+        </div>    
+</body>
+</html>
