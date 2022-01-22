@@ -13,7 +13,7 @@ function checkLogin(req, res){
   }
 }
 
-/* GET home page. */
+// ホーム画面の表示 
 router.get('/', function(req, res, next) {
   if (checkLogin(req,res)){ return };
   res.render('index', { title: '競馬予想・戦績管理アプリ' });
