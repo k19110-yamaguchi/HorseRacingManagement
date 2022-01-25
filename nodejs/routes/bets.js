@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const db = require('../models/index');
 const { Op } = require('sequelize');
+const client = require('cheerio-httpcli');
 const placeArr = ["札幌", "函館", "福島", "新潟", "東京", 
                     "中山", "中京", "京都", "阪神", "小倉"]
 
@@ -10,7 +11,6 @@ function print(type, data){
     console.log(type + ": " + data);
 
 }
-
 
 // ログインチェックの関数
 function checkLogin(req, res){
@@ -31,7 +31,11 @@ router.get('/', function(req, res, next) {
         place: "中京",
         day: 1,
         count: 1,
-        num: 11,    
+        num: 11,   
+        waku: null,
+        umaban: null,
+        horsename: null,
+        total: 0, 
         url: null, 
         err: null,    
         placeArr: placeArr        
@@ -71,8 +75,7 @@ router.post('/', (req, res, next) => {
     }
 
     // エラーがある場合
-    if(err != ""){
-        print("err", err);
+    if(err != ""){        
         var data = {
             title: "レース選択",
             date: date,
@@ -80,6 +83,10 @@ router.post('/', (req, res, next) => {
             day: day,
             count: count,
             num: num,
+            waku: null,
+            umaban: null,
+            horsename: null,
+            total: 0,
             url: null,  
             err: err,
             placeArr: placeArr
@@ -90,43 +97,134 @@ router.post('/', (req, res, next) => {
     // エラーがない場合
     }else{
         
-        var url = createUrl(date, place, count, day, num);  
-        print("URL", url);
-        var data = {
-            title: "レース選択",
-            date: date,
-            place: place,
-            day: day,
-            count: count,
-            num: num,
-            url: url,  
-            err: err,
-            placeArr: placeArr
-        }
+        var url = createUrl(date, place, count, day, num, "shutuba");                                 
 
-        res.render('bets/index', data);        
+        client.fetch(url, function(err, $, result, body){            
+            var tr = [];
+            for(var i = 0; i < 50; i++){
+                var hoge = 'tr[id=tr_' + i + ']';
+                var tmp = $(hoge).html();
+                if(tmp != null){
+                    tr.push(tmp);
+                }
+                                
+            }   
+                                
+            var text_waku =  'Waku';
+            var text_umaban = '';
+            var text_horsename = 'title="';  
+            var waku = [];
+            var umaban = [];
+            var horsename = [];
+            var total = 0;                   
+            
+            var n = null;  
+            var tmp = null;
+            var start = null;
+            var end = null;
+             
+            for(var i in tr){
+                // 枠を取得  
+                n = tr[i].indexOf(text_waku);                
+                if(n == -1){
+                    print("waku", "エラー発生");
+                    break;
+                }else{                    
+                    start = n + text_waku.length;
+                    end = start + 1;
+                    tmp = tr[i].substring(start, end);                    
+                }                
+                waku[i] = Number(tmp);                           
+
+                // 馬番を取得
+                text_umaban = 'Umaban' + String(waku[i]) + ' Txt_C">'
+                n = tr[i].indexOf(text_umaban);                
+                tmp = "";
+                if(n == -1){
+                    print("umaban", "エラー発生");
+                    break;
+                }else{
+                    for(var j = 0; j < 20; j++){
+                        start = n + text_umaban.length + j;
+                        end = start + 1;   
+                        if(tr[i].substring(start, end) == '<'){
+                            break;
+                        }else{
+                            start = n + text_umaban.length + j;
+                            end = start + 1;                            
+                            tmp += tr[i].substring(start, end);
+                        }
+                    }                                     
+                }
+                umaban[i] = Number(tmp);                
+
+                // 馬名を取得
+                n = tr[i].indexOf(text_horsename);
+                var tmp = "";
+                if(n == -1){
+                    print("horsename", "エラー発生");
+                    break;
+                }else{
+                    for(var j = 0; j < 20; j++){
+                        start = n + text_horsename.length + j;
+                            end = start + 1;
+                        if(tr[i].substring(start, end) == '"'){
+                            break;
+                        }else{
+                            start = n + text_horsename.length + j;
+                            end = start + 1;
+                            tmp += tr[i].substring(start, end);
+                        }
+                    }
+                    horsename[i] = tmp                    
+                    
+                }                
+                
+                
+            }
+            total = umaban.length;        
+            print("中total", total);        
+            var data = {
+                title: "レース選択",
+                date: date,
+                place: place,
+                day: day,
+                count: count,
+                num: num,
+                waku: waku,
+                umaban: umaban,
+                horsename: horsename,
+                total: total,
+                url: url,  
+                err: err,
+                placeArr: placeArr
+            }
+    
+            res.render('bets/index', data);            
+
+        });                       
     }
-
   });
 
-function createUrl(y, p, c, d, n){        
-    var uy = changedate(y, "year");    
-    print("uy", uy);
-    var np = changePlace(p)
-    print("np", np);
-    var up = changeNum(np);
-    print("up", up);
-    var uc = changeNum(c);
-    print("uc", uc);
-    var ud = changeNum(d);
-    print("ud", ud);
-    var un = changeNum(n);  
-    print("un", un);
-    
-    var url = "https://race.netkeiba.com/race/result.html?race_id=" + 
-            + uy + up + uc + ud + un +
-            "&rf=race_list";
 
+function createUrl(y, p, c, d, n, mode){        
+    var uy = changedate(y, "year");    
+    
+    var np = changePlace(p)
+    
+    var up = changeNum(np);
+    
+    var uc = changeNum(c);
+    
+    var ud = changeNum(d);
+    
+    var un = changeNum(n);  
+    
+    
+    var url = "https://race.netkeiba.com/race/" + mode + 
+        ".html?race_id=" + uy + up + uc + ud + un + 
+        "&rf=race_submenu";
+    
     return url;
 }
 
@@ -158,8 +256,7 @@ function changedate(d, mode){
 // 場所<->数字変換
 function changePlace(p){
     var res = null;
-    for(var i = 0; i < placeArr.length; i++){
-        print(i, placeArr[i]);
+    for(var i = 0; i < placeArr.length; i++){        
         if(p == placeArr[i]){
             res = i + 1;
         }

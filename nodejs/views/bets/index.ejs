@@ -26,57 +26,103 @@
             <% if(url != null){ %>            
                 <a href="<%= url %>" target="_blank"><%= date %><%= place %><%= num %>Rの結果</a>                                          
             <% } %> 
-            <form method="post" action="/bets">                
-                <div class="form-group">                    
-                    <label for="date">開催日時</label>
-                    <input type="date" name="date" id="date" value="<%= date %>" class="form-control"> 
-
-                    <label for="place">開催場所</label>                    
-                    <select name="place" id="place" class="form-control">
-                        <% for(var i in placeArr){ %>
-                            <% if(placeArr[i] == place){ %>
-                                <option value="<%= placeArr[i] %>" selected><%= placeArr[i] %></option>  
-                            <% }else{ %>
-                            <option value="<%= placeArr[i] %>"><%= placeArr[i] %></option>
-                            <% } %>   
-                        <% } %>              
-                    </select>
-
-                    <label for="count">第何回</label>
-                    <select name="count" id="count" class="form-control">
-                        <% for(var i = 1; i <= 6; i++){ %>
-                            <% if(i == count){ %>
-                                <option value="<%= i %>" selected><%= i %>回</option>  
-                            <% }else{ %>
-                            <option value="<%= i %>"><%= i %>回</option>
-                            <% } %>   
-                        <% } %>                          
-                    </select>
-
-                    <label for="day">何日目</label>
-                    <select name="day" id="day" class="form-control">
-                        <% for(var i = 1; i <= 12; i++){ %>
-                            <% if(i == day){ %>
-                                <option value="<%= i %>" selected><%= i %>日目</option>  
-                            <% }else{ %>
-                            <option value="<%= i %>"><%= i %>日目</option>
-                            <% } %>   
-                        <% } %>                          
-                    </select>
-
-                    <label for="num">レース番号</label>
-                    <select name="num" id="num" class="form-control">
-                        <% for(var i = 1; i <= 12; i++){ %>
-                            <% if(i == num){ %>
-                                <option value="<%= i %>" selected><%= i %>R</option>  
-                            <% }else{ %>
-                            <option value="<%= i %>"><%= i %>R</option>
-                            <% } %>   
-                        <% } %>                          
-                    </select>
-                </div>
-                <input type="submit" value="馬券登録へ" class="btn btn-primary">
-            </form>                
+            <form method="post" action="/bets">         
+                <table class="table">
+                    <tr>
+                        <th>開催日時</th>
+                        <th>開催場所</th>
+                        <th>第何回</th>
+                        <th>何日目</th>
+                        <th>レース番号</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="date" name="date" id="date" value="<%= date %>" class="form-control"> 
+                        </td>
+                        <td>
+                            <select name="place" id="place" class="form-control">
+                                <% for(var i in placeArr){ %>
+                                    <% if(placeArr[i] == place){ %>
+                                        <option value="<%= placeArr[i] %>" selected><%= placeArr[i] %></option>  
+                                    <% }else{ %>
+                                    <option value="<%= placeArr[i] %>"><%= placeArr[i] %></option>
+                                    <% } %>   
+                                <% } %>              
+                            </select>
+                        </td>                        
+                        <td>
+                            <select name="count" id="count" class="form-control">
+                                <% for(var i = 1; i <= 6; i++){ %>
+                                    <% if(i == count){ %>
+                                        <option value="<%= i %>" selected><%= i %>回</option>  
+                                    <% }else{ %>
+                                    <option value="<%= i %>"><%= i %>回</option>
+                                    <% } %>   
+                                <% } %>                          
+                            </select>
+                        </td>
+                        <td>
+                            <select name="day" id="day" class="form-control">
+                                <% for(var i = 1; i <= 12; i++){ %>
+                                    <% if(i == day){ %>
+                                        <option value="<%= i %>" selected><%= i %>日目</option>  
+                                    <% }else{ %>
+                                    <option value="<%= i %>"><%= i %>日目</option>
+                                    <% } %>   
+                                <% } %>                          
+                            </select>
+                        </td>
+                        <td>
+                            <select name="num" id="num" class="form-control">
+                                <% for(var i = 1; i <= 12; i++){ %>
+                                    <% if(i == num){ %>
+                                        <option value="<%= i %>" selected><%= i %>R</option>  
+                                    <% }else{ %>
+                                    <option value="<%= i %>"><%= i %>R</option>
+                                    <% } %>   
+                                <% } %>                          
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <input type="submit" value="馬券登録へ" class="btn btn-primary">
+                        </td>
+                    </tr>
+                </table>                                       
+            </form>   
+            <% if(total != 0){ %>
+            <br>
+            <table class="table">
+                <tr>
+                    <th>枠</th>
+                    <th>馬番</th>
+                    <th>馬名</th>
+                </tr>                             
+                <%
+                    for(var i = 0; i < total; i++){
+                        for(var j = 0; j < total; j++){
+                            if(umaban[j] == i + 1){
+                %>
+                <tr>
+                    <td><%= waku[j] %></td>
+                    <td><%= umaban[j] %></td>
+                    <td><%= horsename[j] %></td>
+                </tr>                    
+                <%    
+                            break;
+                        }
+                    }
+                }  
+                %>                
+            </table>
+            <% } %>
+            
+            
             <p class="mt-4">
                 <a href="/">&lt;&lt; ホーム画面へ戻る</a>             
             </p>
