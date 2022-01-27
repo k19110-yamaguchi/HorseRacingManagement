@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Xcontent-type" content="text/html">    
+    <title><%= title %></title>
+    <link rel='stylesheet' 
+    href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' 
+    crossorigin="anonymous"/>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="conteiner">
+        <header>
+            <h1 class="display-4">
+                <%= title %>
+            </h1>            
+        </header>
+        <div role="main">            
+            <ol class="text-danger">
+                <% if(err != null){ %>
+                    <% for(var i in err){ %>
+                        <li><%= err[i] %></li>
+                    <% } %>                      
+                <% } %> 
+            </ol>               
+            <br>
+            <table class="table">
+                <tr>
+                    <th>枠</th>
+                    <th>馬番</th>
+                    <th>馬名</th>
+                </tr>                             
+                <%
+                    for(var i = 0; i < total; i++){
+                        for(var j = 0; j < total; j++){
+                            if(umaban[j] == i + 1){
+                %>
+                <tr>
+                    <td><%= waku[j] %></td>
+                    <td><%= umaban[j] %></td>
+                    <td><%= horsename[j] %></td>
+                </tr>                    
+                <%    
+                            break;
+                        }
+                    }
+                }  
+                %>                
+            </table>                                                              
+            <p class="mt-4">
+                <a href="/bets">&lt;&lt; レース選択画面へ戻る</a>             
+            </p>
+        </div>    
+</body>
+</html>

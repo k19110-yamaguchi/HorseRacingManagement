@@ -5,6 +5,8 @@ const { Op } = require('sequelize');
 const client = require('cheerio-httpcli');
 const placeArr = ["札幌", "函館", "福島", "新潟", "東京", 
                     "中山", "中京", "京都", "阪神", "小倉"]
+var url = "";
+
 
 // デバック用
 function print(type, data){
@@ -31,12 +33,11 @@ router.get('/', function(req, res, next) {
         place: "中京",
         day: 1,
         count: 1,
-        num: 11,   
-        waku: null,
-        umaban: null,
-        horsename: null,
-        total: 0, 
+        num: 11,           
         url: null, 
+        raceid: null,
+        racename: null,
+        year: null, 
         err: null,    
         placeArr: placeArr        
     }
@@ -45,32 +46,32 @@ router.get('/', function(req, res, next) {
 
 // 馬券のレース選択の処理
 router.post('/', (req, res, next) => {
-    var err = []
+    var err = [];
 
     var date = req.body.date;  
     
     if(date == ""){
-        err.push("date");
+        err.push("dateが未入力です。");
 
     }
     var place = req.body.place;
     if(place == ""){
-        err.push("place");
+        err.push("placeが未入力です。");
         
     }
     var count = req.body.count;
     if(count == ""){
-        err.push("count");
+        err.push("countが未入力です。");
         
     }
     var day = req.body.day;
     if(day == ""){
-        err.push("day");
+        err.push("dayが未入力です。");
         
     }
     var num = req.body.num;
     if(num == ""){
-        err.push("num");
+        err.push("numが未入力です。");
         
     }
 
@@ -82,11 +83,10 @@ router.post('/', (req, res, next) => {
             place: place,
             day: day,
             count: count,
-            num: num,
-            waku: null,
-            umaban: null,
-            horsename: null,
-            total: 0,
+            num: num,       
+            raceid: null,
+            racename: null,
+            year: null,                  
             url: null,  
             err: err,
             placeArr: placeArr
@@ -94,108 +94,34 @@ router.post('/', (req, res, next) => {
 
         res.render('bets/index', data);
 
-    // エラーがない場合
+    // 入力に関するエラーがない場合
     }else{
-        
-        var url = createUrl(date, place, count, day, num, "shutuba");                                 
+        var raceid = getRaceId(date, place, count, day, num);
+        var url = createUrl(raceid, "shutuba");
+        var year = changedate(date, "year");       
+        var racename = null;                                  
 
-        client.fetch(url, function(err, $, result, body){            
-            var tr = [];
-            for(var i = 0; i < 50; i++){
-                var hoge = 'tr[id=tr_' + i + ']';
-                var tmp = $(hoge).html();
-                if(tmp != null){
-                    tr.push(tmp);
-                }
-                                
-            }   
-                                
-            var text_waku =  'Waku';
-            var text_umaban = '';
-            var text_horsename = 'title="';  
-            var waku = [];
-            var umaban = [];
-            var horsename = [];
-            var total = 0;                   
-            
-            var n = null;  
-            var tmp = null;
-            var start = null;
-            var end = null;
-             
-            for(var i in tr){
-                // 枠を取得  
-                n = tr[i].indexOf(text_waku);                
-                if(n == -1){
-                    print("waku", "エラー発生");
-                    break;
-                }else{                    
-                    start = n + text_waku.length;
-                    end = start + 1;
-                    tmp = tr[i].substring(start, end);                    
-                }                
-                waku[i] = Number(tmp);                           
+        client.fetch(url, function(urlerr, $, result, body){   
+            // レース名の取得
+            var tmp = $('div[class=RaceName]').html(); 
+            if(tmp == null){
+                err.push("入力したレースが見つかりません。")                
 
-                // 馬番を取得
-                text_umaban = 'Umaban' + String(waku[i]) + ' Txt_C">'
-                n = tr[i].indexOf(text_umaban);                
-                tmp = "";
-                if(n == -1){
-                    print("umaban", "エラー発生");
-                    break;
-                }else{
-                    for(var j = 0; j < 20; j++){
-                        start = n + text_umaban.length + j;
-                        end = start + 1;   
-                        if(tr[i].substring(start, end) == '<'){
-                            break;
-                        }else{
-                            start = n + text_umaban.length + j;
-                            end = start + 1;                            
-                            tmp += tr[i].substring(start, end);
-                        }
-                    }                                     
-                }
-                umaban[i] = Number(tmp);                
+            }else{
+                racename = getInfo(tmp, '', '<', 'text');   
 
-                // 馬名を取得
-                n = tr[i].indexOf(text_horsename);
-                var tmp = "";
-                if(n == -1){
-                    print("horsename", "エラー発生");
-                    break;
-                }else{
-                    for(var j = 0; j < 20; j++){
-                        start = n + text_horsename.length + j;
-                            end = start + 1;
-                        if(tr[i].substring(start, end) == '"'){
-                            break;
-                        }else{
-                            start = n + text_horsename.length + j;
-                            end = start + 1;
-                            tmp += tr[i].substring(start, end);
-                        }
-                    }
-                    horsename[i] = tmp                    
-                    
-                }                
-                
-                
-            }
-            total = umaban.length;        
-            print("中total", total);        
+            }                                                                                                                                        
             var data = {
                 title: "レース選択",
                 date: date,
                 place: place,
                 day: day,
                 count: count,
-                num: num,
-                waku: waku,
-                umaban: umaban,
-                horsename: horsename,
-                total: total,
-                url: url,  
+                num: num,                
+                url: url, 
+                raceid: raceid,
+                racename: racename,
+                year: year, 
                 err: err,
                 placeArr: placeArr
             }
@@ -206,8 +132,107 @@ router.post('/', (req, res, next) => {
     }
   });
 
+router.get('/:id', (req, res, next) => {
+    if(checkLogin(req, res)){return};
+    var err = [];
+    var raceid = req.params.id;
+    var year = raceid.substring(0, 4);
+    var url = createUrl(raceid, "shutuba");
+    client.fetch(url, function(urlerr, $, result, body){    
+        //出走馬情報の取得
+        var tr = [];            
+        for(var i = 0; i < 50; i++){
+            var elm = 'tr[id=tr_' + i + ']';
+            var tmp = $(elm).html();
+            if(tmp != null){
+                tr.push(tmp);
+            }
+                            
+        }   
+        // レース名の取得
+        var div = $('div[class=RaceName]').html();                                                          
+        var racename = getInfo(div, "", '<', "text");    
+                            
+        var text_waku =  'Waku';
+        var text_umaban = '';
+        var text_horsename = 'title="';  
+        var waku = [];
+        var umaban = [];
+        var horsename = [];
+        var total = 0;                                   
+            
+        for(var i in tr){
+            // 枠を取得  
+            waku[i] = getInfo(tr[i], text_waku, ' ', "num");                                                           
 
-function createUrl(y, p, c, d, n, mode){        
+            // 馬番を取得
+            text_umaban = 'Umaban' + String(waku[i]) + ' Txt_C">';
+            umaban[i] = getInfo(tr[i], text_umaban, '<', "num");                        
+
+
+            // 馬名を取得
+            horsename[i] = getInfo(tr[i], text_horsename, '"', "text");
+
+            print(waku, umaban + ": ", +horsename);
+
+        }        
+        total = umaban.length;                                 
+                        
+        var data = {
+            title: year + "年" +racename +"の馬券登録",                                                                                
+            racename: racename,            
+            year: year, 
+            waku: waku,
+            umaban: umaban,
+            horsename: horsename,
+            total: total,
+            err: err,            
+        }
+
+        res.render('bets/add', data);            
+
+    });                       
+    
+})
+
+function getInfo(html, text, breakText, type){
+    var info;
+    var tmp = "";
+    var n = 0;
+    var start = 0;
+    var end = start + 1;        
+    if(text != ""){
+        n = html.indexOf(text);
+        print("n", n);
+        if(n == -1){
+            return null
+
+        }
+    }
+    
+    for(var i = 0; i < 20; i++){
+        start = n + text.length + i;
+            end = start + 1;
+        if(html.substring(start, end) == breakText){
+            break;
+
+        }else{                        
+            tmp += html.substring(start, end);
+
+        }
+    }
+    
+
+    if(type == "num"){
+        info = Number(tmp);
+    }else{
+        info = tmp;
+    }    
+    return info;
+
+}
+
+function getRaceId(y, p, c, d, n){
     var uy = changedate(y, "year");    
     
     var np = changePlace(p)
@@ -219,10 +244,13 @@ function createUrl(y, p, c, d, n, mode){
     var ud = changeNum(d);
     
     var un = changeNum(n);  
-    
-    
+
+    return uy + up + uc + ud + un;
+}
+
+function createUrl(id, mode){            
     var url = "https://race.netkeiba.com/race/" + mode + 
-        ".html?race_id=" + uy + up + uc + ud + un + 
+        ".html?race_id=" + id + 
         "&rf=race_submenu";
     
     return url;

@@ -19,13 +19,10 @@
             <ol class="text-danger">
                 <% if(err != null){ %>
                     <% for(var i in err){ %>
-                        <li><%= err[i] %>が未入力です。</li>
+                        <li><%= err[i] %></li>
                     <% } %>                      
                 <% } %> 
-            </ol>
-            <% if(url != null){ %>            
-                <a href="<%= url %>" target="_blank"><%= date %><%= place %><%= num %>Rの結果</a>                                          
-            <% } %> 
+            </ol>            
             <form method="post" action="/bets">         
                 <table class="table">
                     <tr>
@@ -95,34 +92,10 @@
                     </tr>
                 </table>                                       
             </form>   
-            <% if(total != 0){ %>
-            <br>
-            <table class="table">
-                <tr>
-                    <th>枠</th>
-                    <th>馬番</th>
-                    <th>馬名</th>
-                </tr>                             
-                <%
-                    for(var i = 0; i < total; i++){
-                        for(var j = 0; j < total; j++){
-                            if(umaban[j] == i + 1){
-                %>
-                <tr>
-                    <td><%= waku[j] %></td>
-                    <td><%= umaban[j] %></td>
-                    <td><%= horsename[j] %></td>
-                </tr>                    
-                <%    
-                            break;
-                        }
-                    }
-                }  
-                %>                
-            </table>
-            <% } %>
-            
-            
+            <% if(racename != null){ %> 
+                <a href="bets/<%= raceid %>"><%= year %><%= racename %>の馬券登録</a><br>
+                <a href="<%= url %>" target="_blank"><%= year %><%= racename %>の結果</a>                                          
+            <% } %>                                     
             <p class="mt-4">
                 <a href="/">&lt;&lt; ホーム画面へ戻る</a>             
             </p>
