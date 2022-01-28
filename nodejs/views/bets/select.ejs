@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Xcontent-type" content="text/html">    
+    <title><%= title %></title>
+    <link rel='stylesheet' 
+    href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' 
+    crossorigin="anonymous"/>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="conteiner">
+        <header>
+            <h1 class="display-4">
+                <%= title %>
+            </h1>            
+        </header>
+        <div role="main">            
+            <ol class="text-danger">
+                <% if(err != null){ %>
+                    <% for(var i in err){ %>
+                        <li><%= err[i] %></li>
+                    <% } %>                      
+                <% } %> 
+            </ol>            
+            <form method="post" action="/bets/select">
+                <table class="table">
+                    <tr>
+                        <th>開催日時</th>
+                        <th>開催場所</th>
+                        <th>第何回</th>
+                        <th>何日目</th>
+                        <th>レース番号</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="date" name="date" id="date" value="<%= date %>" class="form-control"> 
+                        </td>
+                        <td>
+                            <select name="place" id="place" class="form-control">
+                                <% for(var i in placeArr){ %>
+                                    <% if(placeArr[i] == place){ %>
+                                        <option value="<%= placeArr[i] %>" selected><%= placeArr[i] %></option>  
+                                    <% }else{ %>
+                                    <option value="<%= placeArr[i] %>"><%= placeArr[i] %></option>
+                                    <% } %>   
+                                <% } %>              
+                            </select>
+                        </td>                        
+                        <td>
+                            <select name="count" id="count" class="form-control">
+                                <% for(var i = 1; i <= 6; i++){ %>
+                                    <% if(i == count){ %>
+                                        <option value="<%= i %>" selected><%= i %>回</option>  
+                                    <% }else{ %>
+                                    <option value="<%= i %>"><%= i %>回</option>
+                                    <% } %>   
+                                <% } %>                          
+                            </select>
+                        </td>
+                        <td>
+                            <select name="day" id="day" class="form-control">
+                                <% for(var i = 1; i <= 12; i++){ %>
+                                    <% if(i == day){ %>
+                                        <option value="<%= i %>" selected><%= i %>日目</option>  
+                                    <% }else{ %>
+                                    <option value="<%= i %>"><%= i %>日目</option>
+                                    <% } %>   
+                                <% } %>                          
+                            </select>
+                        </td>
+                        <td>
+                            <select name="num" id="num" class="form-control">
+                                <% for(var i = 1; i <= 12; i++){ %>
+                                    <% if(i == num){ %>
+                                        <option value="<%= i %>" selected><%= i %>R</option>  
+                                    <% }else{ %>
+                                    <option value="<%= i %>"><%= i %>R</option>
+                                    <% } %>   
+                                <% } %>                          
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <input type="submit" value="馬券登録へ" class="btn btn-primary">
+                        </td>
+                    </tr>
+                </table>                                       
+            </form>   
+            <% if(racename != null){ %> 
+                <a href="/bets/select/<%= raceid %>"><%= year %><%= racename %>の馬券登録</a><br>
+                <a href="<%= url %>" target="_blank"><%= year %><%= racename %>の結果</a>                                          
+            <% } %>                                     
+            <p class="mt-4">
+                <a href="/bets">&lt;&lt; 馬券戦績画面へ戻る</a>             
+            </p>
+        </div>    
+</body>
+</html>

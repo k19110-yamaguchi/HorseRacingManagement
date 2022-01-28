@@ -23,32 +23,97 @@
                     <% } %>                      
                 <% } %> 
             </ol>               
-            <br>
-            <table class="table">
-                <tr>
-                    <th>枠</th>
-                    <th>馬番</th>
-                    <th>馬名</th>
-                </tr>                             
-                <%
-                    for(var i = 0; i < total; i++){
-                        for(var j = 0; j < total; j++){
-                            if(umaban[j] == i + 1){
-                %>
-                <tr>
-                    <td><%= waku[j] %></td>
-                    <td><%= umaban[j] %></td>
-                    <td><%= horsename[j] %></td>
-                </tr>                    
-                <%    
-                            break;
-                        }
-                    }
-                }  
-                %>                
-            </table>                                                              
+            <br>            
+            <form method="get" action="/bets/select/<%= id %>">  
+                <table class="table">
+                    <tr>
+                        <th>式別</th>
+                        <th>方式</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <select name="kind" id="kind" class="form-control">
+                                <% for(var i in kindArr){ %>
+                                    <% if(kindArr[i] == kind){ %>
+                                        <option value="<%= kindArr[i] %>" selected><%= kindArr[i] %></option>  
+                                    <% }else{ %>
+                                    <option value="<%= kindArr[i] %>"><%= kindArr[i] %></option>
+                                    <% } %>   
+                                <% } %>   
+                            </select>
+                        </td>
+                        <td>
+                            <select name="comb" id="comb" class="form-control">
+                                <% for(var i in combArr){ %>
+                                    <% if(combArr[i] == comb){ %>
+                                        <option value="<%= combArr[i] %>" selected><%= combArr[i] %></option>  
+                                    <% }else{ %>
+                                    <option value="<%= combArr[i] %>"><%= combArr[i] %></option>
+                                    <% } %>   
+                                <% } %>   
+                            </select>
+                        </td>
+                        <td>
+                            <input type="submit" value="式別・方式の変更" class="btn btn-primary">                                         
+                        </td>
+                    </tr>
+                </table>                                        
+            </form>             
+            <form method="post" action="/bets/select/<%= id %>">                    
+                <table class="table">
+                    <th>
+                        <input type="number" name="money" id="money" class="form-control" placeholder="金額を入力(円)">    
+                    </th>
+                    <th>
+                        <input type="submit" value="登録" class="btn btn-primary">                                         
+                    </th>
+                </table>                                        
+
+                <table class="table">
+                    <tr>
+                        <th>枠</th>
+                        <th>馬番</th>
+                        <th>馬名</th>                                            
+                        <% for(var i = 0; i < headerLen; i++){ %>
+                            <th colspan="<%= colspan %>"><%= header[i] %></th>
+                        <% } %>                                                                                         
+                    </tr>                             
+                    <%  
+                        var index;
+                        for(var i = 0; i < total; i++){
+                            if(umaban[i] == null){
+                                waku[i] = null;
+                                index = i;
+    
+                            }else{
+                                for(var j = 0; j < total; j++){                            
+                                    if(umaban[j] == i + 1){
+                                        index = j;
+                                        break;
+                                    }
+    
+                                }
+                            }                        
+                    %>
+                    <tr>
+                        <td><%= waku[index] %></td>
+                        <td><%= umaban[index] %></td>
+                        <td><%= horsename[index] %></td>
+                                     
+                    <%       
+                            for(var j = 0; j < typeLen; j++){                                                                                                                
+                    %>
+                        <td><input type="<%= type[j] %>" name="<%= buttonName[j]%>" id="<%= buttonName[j]%>" value="<%= umaban[index] %>" class="form-control"></td>
+                    <%                                                                                       
+                            }
+                        }  
+                    %>      
+                    </tr>             
+                </table>                                                                         
+            </form>
             <p class="mt-4">
-                <a href="/bets">&lt;&lt; レース選択画面へ戻る</a>             
+                <a href="/bets/select">&lt;&lt; レース選択画面へ戻る</a>             
             </p>
         </div>    
 </body>
