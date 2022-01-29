@@ -10,7 +10,6 @@ const placeArr = ["札幌", "函館", "福島", "新潟", "東京",
 const kindArr = ["単勝", "複勝", "枠連", "馬連", "ワイド", 
                     "馬単", "3連複", "3連単"];
 
-const buttonName = ["first", "second", "third"];
 
 var url = "";
 
@@ -60,7 +59,7 @@ router.get('/select', function(req, res, next) {
         count: 1,
         num: 11,           
         url: null, 
-        raceid: null,
+        raceId: null,
         racename: null,
         year: null, 
         err: null,    
@@ -120,7 +119,7 @@ router.post('/select', (req, res, next) => {
             day: day,
             count: count,
             num: num,       
-            raceid: null,
+            raceId: null,
             racename: null,
             year: null,                  
             url: null,  
@@ -133,9 +132,9 @@ router.post('/select', (req, res, next) => {
     // 入力に関するエラーがない場合
     }else{
         // レースIDを取得
-        var raceid = getRaceId(date, place, count, day, num);
+        var raceId = getRaceId(date, place, count, day, num);
         // スクレイピングするwebのURLを取得
-        var url = createUrl(raceid, "shutuba");
+        var url = createUrl(raceId, "shutuba");
         // 開催年を取得
         var year = changedate(date, "year");       
         var racename = null;                                  
@@ -163,7 +162,7 @@ router.post('/select', (req, res, next) => {
                 count: count,
                 num: num,                
                 url: url, 
-                raceid: raceid,
+                raceId: raceId,
                 racename: racename,
                 year: year, 
                 err: err,
@@ -180,27 +179,349 @@ router.post('/select', (req, res, next) => {
 // 指定のレースの馬券登録画面を表示
 router.get('/select/:id', (req, res, next) => {
     // ログインチェック
-    if(checkLogin(req, res)){return};
+    if(checkLogin(req, res)){return};    
     // エラーを格納する配列
     var err = [];
-    // レースIDを取得
-    var raceid = req.params.id;
-    print("raceid", raceid);
-    // 開催年を取得
-    var year = raceid.substring(0, 4);
-    // スクレイピングするwebのURLを取得
-    var url = createUrl(raceid, "shutuba");
-    // 馬券の種類を取得(最初は単勝)
-    var kind = req.query.kind;
-    print("kind", kind);
-    if(kind == undefined){
-        kind = kindArr[0];
+    betsScreen(req, res, err, null, null, null, null);
+    
+})
+
+// 馬券登録の処理
+router.post('/select/:id', (req, res, next) => {
+    // エラーを格納する
+    var err = [];
+    // 式別の取得
+    var kind = req.body.hidkind;    
+    // 方式の取得
+    var comb = req.body.hidcomb;
+    // 入力されているかチェック
+    for(var i = 0; i < req.body.typeLen; i++){
+        var tmp;
+        switch(i){            
+            case 0:                 
+                tmp = req.body.btn1;                
+            break;
+            case 1: 
+                tmp = req.body.btn2;
+            break;
+            case 2: 
+                tmp = req.body.btn3;
+            break;
+        }       
+        if(tmp == undefined){
+            err.push("買い目が入力されていません。");
+            break;
+        }
     }
+    if(req.body.money == 0){
+        err.push('金額が入力されていません。');
+
+    }
+
+    // エラーがある場合
+    if(err != ""){        
+        betsScreen(req, res, err, null, null, kind, comb);
+
+    // エラーがない場合
+    }else{
+        // ユーザIDを取得
+    var userId = req.session.login.id;
+    // レースIDを取得
+    var raceId = req.params.id;
+    // レース名
+    var racename = req.body.racename;
+    // 開催日時
+    var date = String(raceId).substring(0, 4);
+    // 開催場所
+    var n = Number(String(raceId).substring(4, 6));
+    var place = placeArr[n-1];   
+    // 第何R
+    var num = String(raceId).substring(10,12);    
+    // 方式の数
+    var combArr = getCombArr(kind);        
+    // ボタンの数
+    var elmLen = req.body.typeLen;
+    // buttonの値
+    var elm1 = [];
+    var elm2 = [];
+    var elm3 = [];
+    for(var i = 0; i < elmLen; i++){
+        var tmp;
+        switch(i){            
+            case 0:                 
+                tmp = req.body.btn1;                
+            break;
+            case 1: 
+                tmp = req.body.btn2;
+            break;
+            case 2: 
+                tmp = req.body.btn3;
+            break;
+        }         
+        for(var j = 0; j < tmp.length; j++){
+            switch(i){            
+                case 0:                 
+                    elm1.push(tmp[j]);          
+                break;
+                case 1: 
+                    elm2.push(tmp[j]);
+                break;
+                case 2: 
+                    elm3.push(tmp[j]); 
+                break;
+            }        
+        
+        }        
+    }
+    
+    var elm = [elm1, elm2, elm3];
+
+    // 組み合わせ総数を取得
+    var combNum = calcCombNum(kind, comb, combArr, elm);    
+    if(comb == "フォーメーション"){
+        var combDel = 0;
+        if(elmLen == 2){            
+            for(var i = 0; i < elm[0].length; i++){
+                for(var j = 0; j < elm[1].length; j++){
+                    if(elm[0][i] == elm[1][j]){
+                        combDel++;
+                    }
+                }
+            }            
+        }else{
+            for(var i = 0; i < elm[0].length; i++){
+                for(var j = 0; j < elm[1].length; j++){
+                    for(var k = 0; k < elm[2].length; k++){
+                        if(elm[0][i] == elm[1][j]){
+                            combDel++;
+                        }
+                        if(elm[0][i] == elm[2][k]){
+                            combDel++;
+                        }
+                        if(elm[1][j] == elm[2][k]){
+                            combDel++;
+                        }
+                    }
+                }
+            }     
+
+        }     
+        combNum -= combDel;
+        
+    }
+    
+    // 賭け金の取得
+    var money = req.body.money * combNum;
+        
+
+    // 入力内容が正しいかチェック
+    if(money % 100 != 0){
+        err.push('金額は100円単位で入力してください。');
+
+    }
+    if(comb == "通常"){
+
+        if(elmLen == 2){            
+            for(var i = 0; i < elm[0].length; i++){
+                for(var j = 0; j < elm[1].length; j++){
+                    if(elm[0][i] == elm[1][j]){
+                        err.push("同じ出走馬を選択しています。");
+                    }
+                }
+            }            
+        }else{
+            for(var i = 0; i < elm[0].length; i++){
+                for(var j = 0; j < elm[1].length; j++){
+                    for(var k = 0; k < elm[2].length; k++){
+                        if(elm[0][i] == elm[1][j]){
+                            err.push("同じ出走馬を選択しています。");
+                        }else if(elm[0][i] == elm[2][k]){
+                            err.push("同じ出走馬を選択しています。");
+                        }else if(elm[1][j] == elm[2][k]){
+                            err.push("同じ出走馬を選択しています。");
+                        }
+                    }
+                }
+            }     
+        }
+    }     
+    // エラーがない場合
+    if(err == ""){
+        const dbBettingticket = {
+            userId: userId,
+            raceId: raceId,
+            date: date,
+            place: place,
+            num: num,
+            racename: racename,   
+            money: money,     
+            kind: kind,
+            comb: comb,
+            elm: elm,
+            elmLen: elmLen,
+            combNum: combNum,
+        }   
+        var name = "";
+        var horseMoney = 0;
+        for(var n = 0; n < 50; n++){
+            switch(n){            
+                case 0:                 
+                    tmp = req.body.name1;                
+                break;
+                case 1: 
+                    tmp = req.body.name2;
+                break;
+                case 2: 
+                    tmp = req.body.name3;
+                break;
+                case 3: 
+                    tmp = req.body.name4;
+                break;
+                case 4: 
+                    tmp = req.body.name5;
+                break;
+                case 5: 
+                    tmp = req.body.name6;
+                break;
+                case 6: 
+                    tmp = req.body.name7;
+                break;
+                case 7: 
+                    tmp = req.body.name8;
+                break;
+                case 8: 
+                    tmp = req.body.name9;
+                break;
+                case 9: 
+                    tmp = req.body.name10;
+                break;
+                case 10: 
+                    tmp = req.body.name11;
+                break;
+                case 11: 
+                    tmp = req.body.name12;
+                break;
+                case 12: 
+                    tmp = req.body.name13;
+                break;
+                case 13: 
+                    tmp = req.body.name14;
+                break;
+                case 14: 
+                    tmp = req.body.name15;
+                break;
+                case 15: 
+                    tmp = req.body.name16;
+                break;
+                case 16: 
+                    tmp = req.body.name17;
+                break;
+                case 17: 
+                    tmp = req.body.name18;
+                break;                
+            }                               
+            if(tmp == undefined){
+                break;
+            }
+            // 買った馬を登録      
+            for(var i = 0; i < elmLen; i++){
+                for(var j = 0; j < elm[i].length; j++){                    
+                    if((n+1) == elm[i][j]){
+                        name = tmp;
+                        
+                        if(kind == kindArr[2] || kind == kindArr[3] || kind == kindArr[4] || kind == kindArr[5]){                            
+                            if(comb != "通常" && comb != "ボックス" && comb != "フォーメーション"){
+                                if(i == 0){
+                                    horseMoney += money;
+                                }else{
+                                    horseMoney += money/combNum;
+                                }
+    
+                            }else if(comb == "ボックス"){                                
+                                horseMoney = money*2/combNum; 
+                            }else{
+                                horseMoney += money/combNum;
+                            }
+                        }else if(kind == kindArr[6] || kind == kindArr[7]){
+                            if(comb != "通常" && comb != "ボックス" && comb != "フォーメーション"){
+                                if(elm[i].length == 1){
+                                    horseMoney += money;
+                                }else{
+                                    horseMoney += money/combNum;
+                                }
+    
+                            }else if(comb == "ボックス"){                                
+                                horseMoney = money*3/combNum; 
+                            }else{
+                                horseMoney += money/combNum;
+                            }
+
+                        }else{
+                            horseMoney += money/combNum;
+                        }                                         
+                    }
+                }       
+            }
+            if(horseMoney != 0){
+                print("name", name);
+                print("horseMoney", horseMoney);   
+            }
+            
+            name = "";
+            horseMoney = 0;
+
+        }           
+        
+
+        const dbHorse = {
+            userId: userId,
+            raceId: raceId,
+            name: name,
+            date: date,
+            place: place,
+            num: num,
+            racename: racename,   
+            money: horseMoney,     
+
+        }
+        betsScreen(req, res, err, dbBettingticket, dbHorse, kind, comb);
+
+    // エラーがある場合
+    }else{
+        betsScreen(req, res, err, null, null, kind, comb);
+        
+
+    }    
+    
+    
+
+    }    
+});
+
+function betsScreen(req, res, err, dbBet, dbHorse, k, c){        
+    // レースIDを取得
+    var raceId = req.params.id;    
+    // 開催年を取得
+    var year = raceId.substring(0, 4);
+    // スクレイピングするwebのURLを取得
+    var url = createUrl(raceId, "shutuba");
+    // 馬券の種類を取得(最初は単勝)
+    var kind = req.query.kind;    
+    if(kind == undefined){   
+        if(k != null){
+            kind = k;
+        }else{
+            kind = kindArr[0];            
+        }          
+    }
+
     // 馬券の種類に応じた組み合わせを取得
-    var combArr = getCombArr(kind);
-    print("combArr", combArr);
+    var combArr = getCombArr(kind);    
     // 組み合わせを取得(最初は通常);
     var comb = req.query.comb;    
+    if(c != null){
+        comb = c;
+    }
     for(var i = 0; i < combArr.length; i++){
         if(comb == combArr[i]){
             break;
@@ -213,6 +534,7 @@ router.get('/select/:id', (req, res, next) => {
 
     // テーブルのヘッダーを取得
     var header = getHeader(kind, comb, combArr);
+    // ヘッダーの長さ
     var headerLen;
     for(var i = 0; i < 3; i++){
         if(header[i] != ""){
@@ -220,9 +542,10 @@ router.get('/select/:id', (req, res, next) => {
 
         }
     }
+
     // ボタンのタイプを取得
     var type = getType(kind, comb, combArr);
-
+    // ボタンのタイプの長さ
     var typeLen;
     for(var i = 0; i < 3; i++){
         if(type[i] != ""){
@@ -230,11 +553,9 @@ router.get('/select/:id', (req, res, next) => {
 
         }
     }
-    var colspan = typeLen - headerLen + 1;    
-    print("type", typeLen);
-    print("header", headerLen);
-    print("colspan", colspan);
+    // ヘッダーをボタンの長さと合わせるための値
 
+    var colspan = typeLen - headerLen + 1;        
     // ウェブスクレイピング開始
     client.fetch(url, function(urlerr, $, result, body){    
         //出走馬情報の取得
@@ -279,12 +600,12 @@ router.get('/select/:id', (req, res, next) => {
 
         }       
         // 出馬数を取得 
-        total = umaban.length;                       
+        total = umaban.length;                   
                        
         // htmlに送るデータ
         var data = {
             title: year + "年" +racename +"の馬券登録",                                                                                
-            id: raceid,
+            id: raceId,
             racename: racename,            
             year: year, 
             waku: waku,
@@ -300,21 +621,238 @@ router.get('/select/:id', (req, res, next) => {
             colspan: colspan,       
             kindArr: kindArr,            
             combArr: combArr,
-            buttonName: buttonName,
-            err: err          
+            err: err,          
+            racename: racename,
+            dbBet: dbBet,
+            dbHorse: dbHorse
         }
 
         res.render('bets/add', data);            
 
-    });                       
-    
-})
+    });                 
+
+}
+
+// 組み合わせの数を計算
+function calcCombNum(k, c, cArr, btn){
+    var combNum = 0;
+    switch(k){
+        // 単勝
+        case kindArr[0]:            
+            combNum = btn[0].length;            
+            break;
+
+        // 複勝
+        case kindArr[1]:
+            combNum = btn[0].length;       
+            break;
+
+        // 枠連
+        case kindArr[2]:              
+            switch(c){
+                // 通常
+                case cArr[0]:
+                    combNum = 1;    
+
+                break;
+                // ながし
+                case cArr[1]:
+                    combNum = btn[1].length; 
+                
+                break;
+                // ボックス
+                case cArr[2]:
+                    combNum = btn[0].length*(btn[0].length - 1)/2;                     
+                
+                break;
+                // フォーメーション
+                case cArr[3]:
+                    combNum = btn[0].length * btn[1].length;
+                
+                break;
+
+            }
+                   
+            break;
+
+        // 馬連
+        case kindArr[3]:
+            switch(c){
+                // 通常
+                case cArr[0]:
+                    combNum = 1;
+
+                break;
+                // ながし
+                case cArr[1]:
+                    combNum = btn[1].length;
+                
+                break;
+                // ボックス
+                case cArr[2]:
+                    combNum = btn[0].length*(btn[0].length - 1)/2;                      
+                
+                break;
+                // フォーメーション
+                case cArr[3]:
+                    combNum = btn[0].length * btn[1].length;
+                
+                break;
+
+            }
+            break;
+            
+        // ワイド
+        case kindArr[4]:
+            switch(c){
+                // 通常
+                case cArr[0]:
+                    combNum = 1;
+
+                break;
+                // ながし
+                case cArr[1]:
+                    combNum = btn[1].length;
+                
+                break;
+                // ボックス
+                case cArr[2]:
+                    combNum = btn[0].length*(btn[0].length - 1)/2;                      
+                
+                break;
+                // フォーメーション
+                case cArr[3]:
+                    combNum = btn[0].length * btn[1].length;
+                
+                break;
+
+            }
+            break;
+
+        // 馬単
+        case kindArr[5]:
+            switch(c){
+                // 通常
+                case cArr[0]:
+                    combNum = 1;
+
+                break;
+                // 1着ながし
+                case cArr[1]:
+                    combNum = btn[1].length;
+                
+                break;
+                // 2着ながし
+                case cArr[2]:
+                    combNum = btn[0].length;
+                
+                break;
+                // ボックス
+                case cArr[3]:
+                    combNum = btn[0].length*(btn[0].length - 1)/2;     
+                
+                break;
+                // フォーメーション
+                case cArr[4]:
+                    combNum = btn[0].length * btn[1].length;
+                
+                break;
+
+            }        
+            break;
+
+        // 3連複
+        case kindArr[6]:
+            switch(c){
+                // 通常
+                case cArr[0]:
+                    combNum = 1;
+
+                break;
+                // 軸1頭ながし
+                case cArr[1]:
+                    combNum = btn[1].length*(btn[1].length - 1)/2;  
+                
+                break;
+                // 軸2頭ながし
+                case cArr[2]:
+                    combNum = btn[2].length;  
+                
+                break;
+                // ボックス
+                case cArr[3]:
+                    combNum = btn[0].length*(btn[0].length - 1)*(btn[0].length - 2)/3;  
+                
+                break;
+                // フォーメーション
+                case cArr[4]:
+                    combNum = btn[0].length*btn[1].length*btn[2].length;  
+                
+                break;                
+
+            }        
+        
+            break;
+
+        // 3連単
+        case kindArr[7]:
+            switch(c){
+                // 通常
+                case cArr[0]:
+                    combNum = 1; 
+
+                break;
+                // 1着ながし
+                case cArr[1]:
+                    combNum = btn[1].length*(btn[1].length - 1)/2;  
+                
+                break;
+                // 2着ながし
+                case cArr[2]:
+                    combNum = btn[1].length*(btn[1].length - 1)/2;  
+                
+                break;
+                // 3着ながし
+                case cArr[3]:
+                    combNum = btn[1].length*(btn[1].length - 1)/2;  
+                
+                break;
+                // 1・2着ながし
+                case cArr[4]:
+                    combNum = btn[2].length;  
+                
+                break;     
+                // 1・3着ながし           
+                case cArr[5]:
+                    combNum = btn[1].length;
+                
+                break;             
+                // 2・3着ながし   
+                case cArr[6]:
+                    combNum = btn[1].length;
+                
+                break;             
+                // ボックス   
+                case cArr[7]:
+                    combNum = btn[0].length * (btn[0].length - 1) * (btn[0].length - 2); 
+                // フォーメーションs
+                break;                
+                case cArr[8]:
+                    combNum = btn[0].length*btn[1].length*btn[2].length;                     
+                
+                break;                                          
+
+            }        
+        
+            break;
+    }
+    return combNum;
+}
 
 // 馬券に応じた組み合わせ方を取得
 function getCombArr(k){
     var combArr = [];
     combArr.push("通常");
-    print("step", 1);
    if(k == kindArr[2] || k == kindArr[3] || k == kindArr[4]){
         combArr.push("ながし");
         
@@ -331,14 +869,12 @@ function getCombArr(k){
     }else if(k == kindArr[6]){
         combArr.push("軸1頭ながし");
         combArr.push("軸2頭ながし");
-    }
-    print("step", 2);
+    }    
 
     if(k != kindArr[0] && k != kindArr[1]){
         combArr.push("ボックス");
         combArr.push("フォーメーション");
     }
-    print("step", 3);
     return combArr;
 
 }

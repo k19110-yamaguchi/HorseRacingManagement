@@ -17,13 +17,34 @@
         </header>
         <div role="main">            
             <ol class="text-danger">
-                <% if(err != null){ %>
+                <% if(err != ""){ %>
                     <% for(var i in err){ %>
                         <li><%= err[i] %></li>
                     <% } %>                      
                 <% } %> 
             </ol>               
-            <br>            
+            <br>     
+            <p>
+                <% if(err == "" && dbBet != null){ %>
+                    <label>馬券を登録しました</label>
+                    <li>ユーザID:<%= dbBet.userId %></li>
+                    <li>レースID:<%= dbBet.raceId %></li>
+                    <li>開催日時:<%= dbBet.date %></li>                    
+                    <li>開催場所:<%= dbBet.place %></li>
+                    <li>第何R:<%= dbBet.num %></li>
+                    <li>レース名:<%= dbBet.racename %></li>
+                    <li>賭け金:<%= dbBet.money %></li>
+                    <li>式別:<%= dbBet.kind %></li>
+                    <li>方式:<%= dbBet.comb %></li>
+                    <% for(var i = 0; i < dbBet.elmLen; i++){ %>
+                    <% if(header[i] == ""){
+                        header[i] = header[i-1];
+                    } %>
+                    <li><%= header[i] %>:<%= dbBet.elm[i] %></li>
+                    <% } %>
+                    <li>組み合わせ数:<%= dbBet.combNum %></li>
+                <% } %>
+            </p>       
             <form method="get" action="/bets/select/<%= id %>">  
                 <table class="table">
                     <tr>
@@ -63,7 +84,7 @@
             <form method="post" action="/bets/select/<%= id %>">                    
                 <table class="table">
                     <th>
-                        <input type="number" name="money" id="money" class="form-control" placeholder="金額を入力(円)">    
+                        <input type="number" name="money" id="money" class="form-control" placeholder="各金額を入力(100円単位)">    
                     </th>
                     <th>
                         <input type="submit" value="登録" class="btn btn-primary">                                         
@@ -100,17 +121,22 @@
                         <td><%= waku[index] %></td>
                         <td><%= umaban[index] %></td>
                         <td><%= horsename[index] %></td>
+                        <input type="hidden" name="name<%= umaban[index] %>" id="name<%= umaban[index] %>" value="<%= horsename[index] %>">   
                                      
                     <%       
                             for(var j = 0; j < typeLen; j++){                                                                                                                
                     %>
-                        <td><input type="<%= type[j] %>" name="<%= buttonName[j]%>" id="<%= buttonName[j]%>" value="<%= umaban[index] %>" class="form-control"></td>
+                        <td><input type="<%= type[j] %>" name="btn<%= j+1 %>" id="btn<%= j+1 %>" value="<%= umaban[index] %>" class="form-control"></td>
                     <%                                                                                       
                             }
                         }  
                     %>      
                     </tr>             
-                </table>                                                                         
+                </table>                    
+                <input type="hidden" name="racename" id="racename" value="<%= racename %>">                                                                     
+                <input type="hidden" name="typeLen" id="typeLen" value="<%= typeLen %>">                                                                                                                                                                       
+                <input type="hidden" name="hidkind" id="hidkind" value="<%= kind %>">                                                                     
+                <input type="hidden" name="hidcomb" id="hidcomb" value="<%= comb %>">                                                                     
             </form>
             <p class="mt-4">
                 <a href="/bets/select">&lt;&lt; レース選択画面へ戻る</a>             
