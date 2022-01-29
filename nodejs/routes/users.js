@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../models/index");
 const {Op} = require("sequelize");
 
+// ログイン画面の表示
 router.get('/', function(req, res, next) {
   var data = {
     title: 'ユーザログイン',

@@ -8,6 +8,7 @@ const session = require('express-session')
 // Routerの追加
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var betsRouter = require('./routes/bets');
 
 var app = express();
 
@@ -33,6 +34,7 @@ app.use(session(session_opt));
 // useの追加
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/bets', betsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

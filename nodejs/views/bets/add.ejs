@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Xcontent-type" content="text/html">    
+    <title><%= title %></title>
+    <link rel='stylesheet' 
+    href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' 
+    crossorigin="anonymous"/>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="conteiner">
+        <header>
+            <h1 class="display-4">
+                <%= title %>
+            </h1>            
+        </header>
+        <div role="main">            
+            <ol class="text-danger">
+                <% if(err != ""){ %>
+                    <% for(var i in err){ %>
+                        <li><%= err[i] %></li>
+                    <% } %>                      
+                <% } %> 
+            </ol>               
+            <br>     
+            <p>
+                <% if(err == "" && dbBet != null){ %>
+                    <label>馬券を登録しました</label>
+                    <li>ユーザID:<%= dbBet.userId %></li>
+                    <li>レースID:<%= dbBet.raceId %></li>
+                    <li>開催日時:<%= dbBet.date %></li>                    
+                    <li>開催場所:<%= dbBet.place %></li>
+                    <li>第何R:<%= dbBet.num %></li>
+                    <li>レース名:<%= dbBet.racename %></li>
+                    <li>賭け金:<%= dbBet.money %></li>
+                    <li>式別:<%= dbBet.kind %></li>
+                    <li>方式:<%= dbBet.comb %></li>
+                    <% for(var i = 0; i < dbBet.elmLen; i++){ %>
+                    <% if(header[i] == ""){
+                        header[i] = header[i-1];
+                    } %>
+                    <li><%= header[i] %>:<%= dbBet.elm[i] %></li>
+                    <% } %>
+                    <li>組み合わせ数:<%= dbBet.combNum %></li>
+                <% } %>
+            </p>       
+            <form method="get" action="/bets/select/<%= id %>">  
+                <table class="table">
+                    <tr>
+                        <th>式別</th>
+                        <th>方式</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <select name="kind" id="kind" class="form-control">
+                                <% for(var i in kindArr){ %>
+                                    <% if(kindArr[i] == kind){ %>
+                                        <option value="<%= kindArr[i] %>" selected><%= kindArr[i] %></option>  
+                                    <% }else{ %>
+                                    <option value="<%= kindArr[i] %>"><%= kindArr[i] %></option>
+                                    <% } %>   
+                                <% } %>   
+                            </select>
+                        </td>
+                        <td>
+                            <select name="comb" id="comb" class="form-control">
+                                <% for(var i in combArr){ %>
+                                    <% if(combArr[i] == comb){ %>
+                                        <option value="<%= combArr[i] %>" selected><%= combArr[i] %></option>  
+                                    <% }else{ %>
+                                    <option value="<%= combArr[i] %>"><%= combArr[i] %></option>
+                                    <% } %>   
+                                <% } %>   
+                            </select>
+                        </td>
+                        <td>
+                            <input type="submit" value="式別・方式の変更" class="btn btn-primary">                                         
+                        </td>
+                    </tr>
+                </table>                                        
+            </form>             
+            <form method="post" action="/bets/select/<%= id %>">                    
+                <table class="table">
+                    <th>
+                        <input type="number" name="money" id="money" class="form-control" placeholder="各金額を入力(100円単位)">    
+                    </th>
+                    <th>
+                        <input type="submit" value="登録" class="btn btn-primary">                                         
+                    </th>
+                </table>                                        
+
+                <table class="table">
+                    <tr>
+                        <th>枠</th>
+                        <th>馬番</th>
+                        <th>馬名</th>                                            
+                        <% for(var i = 0; i < headerLen; i++){ %>
+                            <th colspan="<%= colspan %>"><%= header[i] %></th>
+                        <% } %>                                                                                         
+                    </tr>                             
+                    <%  
+                        var index;
+                        for(var i = 0; i < total; i++){
+                            if(umaban[i] == null){
+                                waku[i] = null;
+                                index = i;
+    
+                            }else{
+                                for(var j = 0; j < total; j++){                            
+                                    if(umaban[j] == i + 1){
+                                        index = j;
+                                        break;
+                                    }
+    
+                                }
+                            }                        
+                    %>
+                    <tr>
+                        <td><%= waku[index] %></td>
+                        <td><%= umaban[index] %></td>
+                        <td><%= horsename[index] %></td>
+                        <input type="hidden" name="name<%= umaban[index] %>" id="name<%= umaban[index] %>" value="<%= horsename[index] %>">   
+                                     
+                    <%       
+                            for(var j = 0; j < typeLen; j++){                                                                                                                
+                    %>
+                        <td><input type="<%= type[j] %>" name="btn<%= j+1 %>" id="btn<%= j+1 %>" value="<%= umaban[index] %>" class="form-control"></td>
+                    <%                                                                                       
+                            }
+                        }  
+                    %>      
+                    </tr>             
+                </table>                    
+                <input type="hidden" name="racename" id="racename" value="<%= racename %>">                                                                     
+                <input type="hidden" name="typeLen" id="typeLen" value="<%= typeLen %>">                                                                                                                                                                       
+                <input type="hidden" name="hidkind" id="hidkind" value="<%= kind %>">                                                                     
+                <input type="hidden" name="hidcomb" id="hidcomb" value="<%= comb %>">                                                                     
+            </form>
+            <p class="mt-4">
+                <a href="/bets/select">&lt;&lt; レース選択画面へ戻る</a>             
+            </p>
+        </div>    
+</body>
+</html>
