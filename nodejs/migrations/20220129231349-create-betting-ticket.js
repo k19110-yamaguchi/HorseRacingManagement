@@ -11,13 +11,22 @@ module.exports = {
       userId: {
         type: Sequelize.INTEGER
       },
+      raceId: {
+        type: Sequelize.INTEGER
+      },
       date: {
-        type: Sequelize.DATE
+        type: Sequelize.INTEGER
       },
       place: {
         type: Sequelize.STRING
       },
       num: {
+        type: Sequelize.INTEGER
+      },
+      racename: {
+        type: Sequelize.STRING
+      },
+      money: {
         type: Sequelize.INTEGER
       },
       kind: {
@@ -26,19 +35,13 @@ module.exports = {
       comb: {
         type: Sequelize.STRING
       },
-      first: {
+      elm: {
         type: Sequelize.INTEGER
       },
-      second: {
+      elmLen: {
         type: Sequelize.INTEGER
       },
-      third: {
-        type: Sequelize.INTEGER
-      },
-      bet: {
-        type: Sequelize.INTEGER
-      },
-      refund: {
+      combNum: {
         type: Sequelize.INTEGER
       },
       createdAt: {

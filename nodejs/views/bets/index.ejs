@@ -15,8 +15,26 @@
                 <%= title %>
             </h1>            
         </header>
-        <div role="main">            
+        <div role="main">                        
             <a href="bets/select">レース選択画面へ</a>
+            <% if(content != ""){ %>
+            <table class="table">
+                <tr>                    
+                    <th>日付</th>
+                    <th>レース名</th>                    
+                    <th>賭け金</th>
+                    <th>払い戻し</th>
+                </tr>
+                <% for(var i in content){ %>
+                    <tr>
+                        <td><%= content[i].date %></td>
+                        <td><%= content[i].racename %></td>
+                        <td><%= content[i].money %></td>
+                        <td>まだだよー</td>
+                    </tr>
+                <% } %>
+            </table>
+            <% } %>
             <p class="mt-4">
                 <a href="/">&lt;&lt; ホーム画面へ戻る</a>             
             </p>

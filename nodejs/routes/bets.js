@@ -36,13 +36,22 @@ function checkLogin(req, res){
 router.get('/', function(req, res, next) {
     // ログインのチェック
     if (checkLogin(req,res)){ return };
-    // htmlに送るデータ
-    var data = {
-        title: "馬券戦績",        
-        err: null,                    
-    }
-    // 馬券戦績画面の表示
-    res.render('bets/index', data);
+    db.BettingTicket.findAll({
+        where: {userId: req.session.login.id},
+        order: [
+            ['raceId', 'DESC']
+        ]        
+    }).then(bets => {
+        print("bets", bets);
+        // htmlに送るデータ
+        var data = {
+            title: "馬券戦績",     
+            content: bets,   
+            err: null,                    
+        }
+        // 馬券戦績画面の表示
+        res.render('bets/index', data);
+    });
 
   });
 
@@ -140,7 +149,7 @@ router.post('/select', (req, res, next) => {
         var racename = null;                                  
 
         // スクレイピングを開始
-        client.fetch(url, function(urlerr, $, result, body){   
+        client.fetch(url, function(urlerr, $, result, body){               
             // レース名の取得
             var tmp = $('div[class=RaceName]').html(); 
             // レース名が見つからない場合
@@ -152,7 +161,8 @@ router.post('/select', (req, res, next) => {
                 // レース名を取得
                 racename = getInfo(tmp, '', '<', 'text');   
 
-            }                    
+            }                                
+
             // htmlに送るデータ                                                                                                                    
             var data = {
                 title: "レース選択",
@@ -347,7 +357,7 @@ router.post('/select/:id', (req, res, next) => {
     }     
     // エラーがない場合
     if(err == ""){
-        const dbBettingticket = {
+        const dbBettingTicket = {
             userId: userId,
             raceId: raceId,
             date: date,
@@ -361,6 +371,20 @@ router.post('/select/:id', (req, res, next) => {
             elmLen: elmLen,
             combNum: combNum,
         }   
+        db.BettingTicket.create({
+            userId: dbBettingTicket.userId,
+            raceId: dbBettingTicket.raceId,
+            date: dbBettingTicket.date,
+            place: dbBettingTicket.place,
+            num: dbBettingTicket.num,
+            racename: dbBettingTicket.racename,   
+            money: dbBettingTicket.money,     
+            kind: dbBettingTicket.kind,
+            comb: dbBettingTicket.comb,
+            elm: dbBettingTicket.elm,
+            elmLen: dbBettingTicket.elmLen,
+            combNum: dbBettingTicket.combNum,
+        })
         var name = "";
         var horseMoney = 0;
         for(var n = 0; n < 50; n++){
@@ -484,7 +508,7 @@ router.post('/select/:id', (req, res, next) => {
             money: horseMoney,     
 
         }
-        betsScreen(req, res, err, dbBettingticket, dbHorse, kind, comb);
+        betsScreen(req, res, err, dbBettingTicket, dbHorse, kind, comb);
 
     // エラーがある場合
     }else{
@@ -570,7 +594,7 @@ function betsScreen(req, res, err, dbBet, dbHorse, k, c){
 
         // レース名の取得
         var div = $('div[class=RaceName]').html();                                                          
-        var racename = getInfo(div, "", '<', "text");    
+        var racename = getInfo(div, "", '<', "text");            
 
         // 枠を検索するためのテキスト                    
         var text_waku =  'Waku';

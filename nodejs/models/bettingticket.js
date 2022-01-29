@@ -9,8 +9,16 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    raceId: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "レースIDは必須です。"
+        }
+      }
+    },
     date: {
-      type: DataTypes.DATE,
+      type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
           msg: "開催日時は必須です。"
@@ -29,36 +37,19 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "第何レースか必須です。"
+          msg: "第何Rか必須です。"
         }
       }
     },
-    kind: {
+    racename: {
       type: DataTypes.STRING,
       validate: {
         notEmpty: {
-          msg: "馬券の買い方は必須です。"
+          msg: "レース名は必須です。"
         }
       }
     },
-    comb: {
-      type: DataTypes.STRING,
-      validate: {
-        notEmpty: {
-          msg: "組み合わせ方は必須です。"
-        }
-      }
-    },
-    first: {
-      type: DataTypes.INTEGER,
-    },
-    second: {
-      type: DataTypes.INTEGER,
-    },
-    third: {
-      type: DataTypes.INTEGER,
-    },
-    bet: {
+    money: {
       type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
@@ -66,14 +57,46 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
-    refund: {
+    kind: {
+      type: DataTypes.STRING,
+      validate: {
+        notEmpty: {
+          msg: "馬券の式別は必須です。"
+        }
+      }
+    },
+    comb: {
+      type: DataTypes.STRING,
+      validate: {
+        notEmpty: {
+          msg: "馬券の方式は必須です。"
+        }
+      }
+    },    
+    elm: {
       type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "払い戻しは必須です。"
+          msg: "買い目は必須です。"
         }
       }
-    }
+    },
+    elmLen: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "買い目の長さは必須です。"
+        }
+      }
+    },
+    combNum: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "組み合わせ数は必須です。"
+        }
+      }
+    },
   }, {});
 
   BettingTicket.associate = function(models){
