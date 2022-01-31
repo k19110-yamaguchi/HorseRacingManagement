@@ -32,54 +32,68 @@ function checkLogin(req, res){
 // 馬券戦績画面の表示
 router.get('/', function(req, res, next) {
     // ログインのチェック
-    if (checkLogin(req,res)){ return };       
-    db.BettingTicket.findAll({   
+    if (checkLogin(req,res)){ return };   
+    db.Horse.findAll({   
         where: {userId: req.session.login.id},
         order: [
             ['raceId', 'DESC']
         ]             
-    }).then(bets => {        
-        if(bets == ""){            
-            print("該当なし", "");  
+    }).then(hoese => {     
+        db.BettingTicket.findAll({   
+            where: {userId: req.session.login.id},
+            order: [
+                ['raceId', 'DESC']
+            ]             
+        }).then(bets => {        
+            if(bets == ""){            
+                print("該当なし", "");  
+                // htmlに送るデータ
+                var data = {
+                    title: "馬券戦績",     
+                    bet: bets,   
+                    horse: hoese,
+                    err: null,                    
+                }
+                // 馬券戦績画面の表示
+                res.render('bets/index', data);    
+                return;     
+            }      
+            var raceId;
+            
+            if(Array.isArray(bets)){
+                for(var i = 0; i < bets.length; i++){
+                    raceId = bets[i].raceId;  
+                    var url = createUrl(raceId, "result"); 
+                    setRefund(url, raceId);
+    
+                }              
+            }else{
+                raceId = bets.raceId;
+                var url = createUrl(raceId, "result"); 
+                setRefund(url, raceId);
+    
+            }            
+            
+            db.Refund.findAll({
+    
+            })
+
             // htmlに送るデータ
             var data = {
                 title: "馬券戦績",     
-                content: bets,   
+                bet: bets,   
+                horse: hoese,
                 err: null,                    
             }
             // 馬券戦績画面の表示
             res.render('bets/index', data);    
-            return;     
-        }      
-        var raceId;
-        
-        if(Array.isArray(bets)){
-            for(var i = 0; i < bets.length; i++){
-                raceId = bets[i].raceId;  
-                var url = createUrl(raceId, "result"); 
-                getRefund(url, raceId);
-
-            }              
-        }else{
-            raceId = bets.raceId;
-            var url = createUrl(raceId, "result"); 
-            getRefund(url, raceId);
-
-        }                                                                                                                                          
-          
-        // htmlに送るデータ
-        var data = {
-            title: "馬券戦績",     
-            content: bets,   
-            err: null,                    
-        }
-        // 馬券戦績画面の表示
-        res.render('bets/index', data);    
-        return;                      
+            return;                         
+        });    
     });
 });
 
-function getRefund(url, raceId){    
+// 払い戻しをホームページから取得
+function setRefund(url, raceId){    
     // スクレイピングを開始
     client.fetch(url, function(urlerr, $, result, body){  
         db.Refund.findAll({         
@@ -213,9 +227,14 @@ function getRefund(url, raceId){
             }
         });          
     });   
-                                     
+
     return   
 }  
+
+// データを削除する
+router.get('delete/:id', function(req, res, next){
+
+})
 
 // レース選択画面の表示
 router.get('/select', function(req, res, next) {
@@ -354,7 +373,7 @@ router.get('/select/:id', (req, res, next) => {
     if(checkLogin(req, res)){return};    
     // エラーを格納する配列
     var err = [];
-    betsScreen(req, res, err, null, null, null, null);
+    betsScreen(req, res, err, null, null, null);
     
 })
 
@@ -392,7 +411,7 @@ router.post('/select/:id', (req, res, next) => {
 
     // エラーがある場合
     if(err != ""){        
-        betsScreen(req, res, err, null, null, kind, comb);
+        betsScreen(req, res, err, null, kind, comb);
 
     // エラーがない場合
     }else{
@@ -563,7 +582,21 @@ router.post('/select/:id', (req, res, next) => {
             elm: dbBettingTicket.elm,
             elmLen: dbBettingTicket.elmLen,
             combNum: dbBettingTicket.combNum,
-        })
+        });
+        print("馬券登録完了", 'hoge');
+
+        db.BettingTicket.findAll({   
+            where: {userId: req.session.login.id},
+            order: [
+                ['createdAt', 'DESC']
+            ]             
+        }).then(bets => { 
+            var betId;          
+            if(Array.isArray(bets)){
+                betId = bets[0].id;
+            }else{
+                betId = bets.id;
+            }                                           
         var name = "";
         var horseMoney = 0;
         for(var n = 0; n < 50; n++){
@@ -622,15 +655,16 @@ router.post('/select/:id', (req, res, next) => {
                 case 17: 
                     tmp = req.body.name18;
                 break;                
-            }                               
+            }                              
             if(tmp == undefined){
                 break;
             }
-            // 買った馬を登録      
-            
+            print("tmp", tmp);
+            print("elmLen", elmLen);
+            // 買った馬を登録             
             for(var i = 0; i < elmLen; i++){
                 if(Array.isArray(elm[i])){
-                    for(var j = 0; j < elm[i].length; j++){                    
+                    for(var j = 0; j < elm[i].length; j++){                  
                         if((n+1) == elm[i][j]){
                             name = tmp;
                             
@@ -667,47 +701,58 @@ router.post('/select/:id', (req, res, next) => {
                         }
                     }       
                 }else{
-                    horseMoney += money;
+                    if((n+1) == elm[i]){                        
+                        name = tmp;
+                        horseMoney = money;
 
-                }                
-            }
-            if(horseMoney != 0){
-                print("name", name);
-                print("horseMoney", horseMoney);   
-            }
-            
+                    }                    
+                }   
+                const dbHorse = {
+                    userId: userId,
+                    betId: betId,
+                    raceId: raceId,
+                    name: name,
+                    date: date,
+                    place: place,
+                    num: num,
+                    racename: racename,   
+                    money: horseMoney,             
+                }    
+                if(horseMoney != 0){
+                    db.Horse.create({
+                        userId: dbHorse.userId,
+                        betId: dbHorse.betId,
+                        raceId: dbHorse.raceId,
+                        name: dbHorse.name,
+                        date: dbHorse.date,
+                        place: dbHorse.place,
+                        num: dbHorse.num,
+                        racename: dbHorse.racename,   
+                        money: dbHorse.money, 
+                    })
+                    print("name", name);
+                    print("horseMoney", horseMoney);   
+                }
+            }                                                        
             name = "";
             horseMoney = 0;
-
         }           
-        
 
-        const dbHorse = {
-            userId: userId,
-            raceId: raceId,
-            name: name,
-            date: date,
-            place: place,
-            num: num,
-            racename: racename,   
-            money: horseMoney,     
-
-        }
-        betsScreen(req, res, err, dbBettingTicket, dbHorse, kind, comb);
-
+        betsScreen(req, res, err, dbBettingTicket, kind, comb);
+        })
     // エラーがある場合
     }else{
         betsScreen(req, res, err, null, null, kind, comb);
         
 
-    }    
+    }        
     
     
 
     }    
 });
 
-function betsScreen(req, res, err, dbBet, dbHorse, k, c){        
+function betsScreen(req, res, err, dbBet, k, c){        
     // レースIDを取得
     var raceId = req.params.id;    
     // 開催年を取得
@@ -832,8 +877,7 @@ function betsScreen(req, res, err, dbBet, dbHorse, k, c){
             combArr: combArr,
             err: err,          
             racename: racename,
-            dbBet: dbBet,
-            dbHorse: dbHorse
+            dbBet: dbBet,            
         }
 
         res.render('bets/add', data);            
