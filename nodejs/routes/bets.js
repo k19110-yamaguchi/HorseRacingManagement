@@ -4,6 +4,7 @@ const db = require('../models/index');
 const { Op, col } = require('sequelize');
 const client = require('cheerio-httpcli');
 const { text } = require('express');
+const refund = require('../models/refund');
 
 const placeArr = ["札幌", "函館", "福島", "新潟", "東京", 
                     "中山", "中京", "京都", "阪神", "小倉"];
@@ -74,20 +75,27 @@ router.get('/', function(req, res, next) {
     
             }            
             
-            db.Refund.findAll({
-    
-            })
+            db.Refund.findAll({                                       
+                order: [
+                    ['raceId', 'DESC']
+                ]               
+        
+            }).then(ref => {    
 
-            // htmlに送るデータ
-            var data = {
-                title: "馬券戦績",     
-                bet: bets,   
-                horse: hoese,
-                err: null,                    
-            }
-            // 馬券戦績画面の表示
-            res.render('bets/index', data);    
-            return;                         
+                // htmlに送るデータ
+                var data = {
+                    title: "馬券戦績",     
+                    bet: bets,   
+                    horse: hoese,
+                    refund: ref,
+                    err: null,                    
+                }
+                // 馬券戦績画面の表示
+                res.render('bets/index', data);    
+                return;  
+
+    
+            });                                   
         });    
     });
 });
@@ -268,7 +276,7 @@ router.post('/delete/:id', (req, res, next) => {
             }
         }))
         .then(model => {
-            res.redirect('/');
+            res.redirect('/bets');
         })            
     })    
 });
@@ -504,8 +512,7 @@ router.post('/select/:id', (req, res, next) => {
                     break;
                 }        
             }   
-        }else{
-            elmLen = 1;
+        }else{            
             switch(i){            
                 case 0:                 
                     elm1 = tmp;                        
@@ -518,7 +525,7 @@ router.post('/select/:id', (req, res, next) => {
                 break;
             }        
         }             
-    }
+    }    
     
     var elm = [elm1, elm2, elm3];
 
