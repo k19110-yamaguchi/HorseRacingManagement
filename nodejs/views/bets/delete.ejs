@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta http-equiv="content-type"
+        content="text/html; charset=UTF-8">
+    <title><%= title %></title>
+    <link rel="stylesheet" 
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
+    crossorigin="anonymous">
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+
+<body class="container">
+  <header>
+    <h1 class="display-4 text-primary">
+      <%= title %></h1>
+  </header>  
+  <div role="main">    
+      <table class="table">        
+        <tr>
+        <th>開催日時</th>
+        <td><%= bet.date %></td>
+        </tr>
+        <tr>
+        <th>開催場所</th>
+        <td><%= bet.place %></td>
+        </tr>
+        <tr>
+            <th>第何R</th>
+            <td><%= bet.num %></td>
+        </tr>
+        <tr>
+            <th>賭け金</th>
+            <td><%= bet.money %></td>
+        </tr>
+        <tr>
+            <th>式別</th>
+            <td><%= bet.kind %></td>
+        </tr>
+        <tr>
+            <th>方式</th>
+            <td><%= bet.comb %></td>
+        </tr>            
+      </table>
+    
+    <form method="post" action="/bets/delete/<%= id %>">      
+      <input type="submit" value="削除" 
+        class="btn btn-primary">
+    </form>    
+    <p class="mt-4"><a href="/bets">&lt;&lt; 馬券戦績画面へ戻る</a></p>
+    
+
+    
+  </div>
+</body>
+</html>

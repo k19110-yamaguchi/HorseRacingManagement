@@ -232,9 +232,47 @@ function setRefund(url, raceId){
 }  
 
 // データを削除する
-router.get('delete/:id', function(req, res, next){
+router.get('/delete/:id', function(req, res, next){
+    // ログインのチェック
+    if (checkLogin(req,res)){ return };
+    db.BettingTicket.findOne({
+        where: {
+            id: req.params.id,
+            userId: req.session.login.id
+        },        
+    }).then(function(bet){
+        var data = {
+            title: '登録馬券の削除',
+            id : req.params.id,
+            bet: bet
+        }
+        res.render('bets/delete', data);
 
+    })
 })
+
+// 馬券の削除処理
+router.post('/delete/:id', (req, res, next) => {
+    if (checkLogin(req,res)){ return };
+    db.sequelize.sync()
+    .then(() => db.BettingTicket.destroy({
+        where: {
+            id: req.params.id,            
+        }
+    }))
+    .then(model => {
+        db.sequelize.sync()
+        .then(() => db.Horse.destroy({
+            where: {
+                betId: req.params.id,            
+            }
+        }))
+        .then(model => {
+            res.redirect('/');
+        })            
+    })    
+});
+
 
 // レース選択画面の表示
 router.get('/select', function(req, res, next) {

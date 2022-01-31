@@ -28,7 +28,7 @@
                 </tr>
                 <% for(var i in bet){ %>
                     <tr>                        
-                        <td><%= bet[i].racename %></td>
+                        <td><a href="/bets/delete/<%= bet[i].id %>"><%= bet[i].racename %></a></td>
                         <td><%= bet[i].money %>円</td>
                         <td>まだだよー</td>
                     </tr>
