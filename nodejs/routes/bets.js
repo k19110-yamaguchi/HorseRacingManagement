@@ -1,5 +1,5 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
 const db = require('../models/index');
 const { Op, col } = require('sequelize');
 const client = require('cheerio-httpcli');
@@ -10,10 +10,6 @@ const placeArr = ["札幌", "函館", "福島", "新潟", "東京",
 
 const kindArr = ["単勝", "複勝", "枠連", "馬連", "ワイド", 
                     "馬単", "3連複", "3連単"];
-
-
-var url = "";
-
 
 // デバック用
 function print(type, data){
@@ -36,190 +32,190 @@ function checkLogin(req, res){
 // 馬券戦績画面の表示
 router.get('/', function(req, res, next) {
     // ログインのチェック
-    if (checkLogin(req,res)){ return };    
+    if (checkLogin(req,res)){ return };       
     db.BettingTicket.findAll({   
         where: {userId: req.session.login.id},
         order: [
             ['raceId', 'DESC']
         ]             
-    }).then(bets => {
-        // 結果を取得
-        var first;
-        var second;
-        var third;
-        var win = [];
-        var place = [];
-        var bracket;
-        var quinella;
-        var wid = [];
-        var exacta;
-        var trio;
-        var trifecta;
+    }).then(bets => {        
+        if(bets == ""){            
+            print("該当なし", "");  
+            // htmlに送るデータ
+            var data = {
+                title: "馬券戦績",     
+                content: bets,   
+                err: null,                    
+            }
+            // 馬券戦績画面の表示
+            res.render('bets/index', data);    
+            return;     
+        }      
+        var raceId;
+        
+        if(Array.isArray(bets)){
+            for(var i = 0; i < bets.length; i++){
+                raceId = bets[i].raceId;  
+                var url = createUrl(raceId, "result"); 
+                getRefund(url, raceId);
 
-        for(var i = 0; i < bets.length; i++){
-            var raceId = bets[i].raceId;
-            print('bets.raceId', bets[i].raceId);
-            db.Refund.findAll({         
-                where: {raceId: raceId},
-                order: [
-                    ['raceId', 'DESC']
-                ]               
+            }              
+        }else{
+            raceId = bets.raceId;
+            var url = createUrl(raceId, "result"); 
+            getRefund(url, raceId);
 
-            }).then(ref => {                
-                if(ref != ""){
-                    // htmlに送るデータ
-                    var data = {
-                        title: "馬券戦績",     
-                        content: bets,   
-                        err: null,                    
-                    }
-                    // 馬券戦績画面の表示
-                    res.render('bets/index', data);
-
-                }else{                    
-                    var url = createUrl(raceId, "result");
-                    // スクレイピングを開始
-                    client.fetch(url, function(urlerr, $, result, body){       
-                        // 結果の取得
-                        var kind = ['Tansho', 'Fukusho', 'Wakuren', 'Umaren', 'Wide', 'Umatan', 'Fuku3', 'Tan3'];
-                        for(var j = 0; j < kind.length; j++){
-                            var tr = 'tr[class='+kind[j]+']';
-                            var text = "";
-                            var result = $(tr).html(); 
-                            // 結果が見つからない場合
-                            if(result == null){
-                                break;              
-                            // 結果が見つかった場合
-                            }else{
-                                // 結果を取得
-                                if(kind[j] == 'Tansho'){                             
-                                    print('Tansho', result)                            
-                                    text = '<td class="Payout"><span>'                            
-                                    tmp = getInfo(result, text, '円', 'text');
-                                    win = Number(tmp.replace(',', ''));
-                                    print('払い戻し', win);
-
-                            }else if(kind[j] == 'Fukusho'){
-                                print('Fukusho', result)
-                                text = '<td class="Result">'+'\n'+
-                                    '<div><span>';
-                                tmp = getInfo(result, text, '<', 'num');
-                                first = tmp;
-
-                                text = '<div><span>'+ first +'</span></div>'+'\n'+
-                                    '<div><span></span></div>'+'\n'+
-                                    '<div><span></span></div><div><span>';
-                                tmp = getInfo(result, text, '<', 'num');
-                                second = tmp;
-
-                                text = '<div><span>'+second+'</span></div>'+'\n'+
-                                '<div><span></span></div>' +'\n'+
-                                '<div><span></span></div><div><span>';
-                                tmp = getInfo(result, text, '<', 'num');
-                                third = tmp;
-                                print(first, second + ":" + third);
-
-                                text = '<td class="Payout"><span>'
-                                var tmp0 = getInfo(result, text, '円', 'text');
-                                place.push(Number(tmp0.replace(',', '')));
-
-                                text = '<td class="Payout"><span>' + tmp0 + '円<br>'
-                                var tmp1 = getInfo(result, text, '円', 'text');
-                                place.push(Number(tmp1.replace(',', '')));
-
-                                text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
-                                tmp = getInfo(result, text, '円', 'text');
-                                place.push(Number(tmp.replace(',', '')));
-                                print('払い戻し', place);                            
-
-
-                            }else if(kind[j] == 'Wakuren'){
-                                print('Wakuren', result)
-                                text = '<td class="Payout"><span>'                            
-                                tmp = getInfo(result, text, '円', 'text');
-                                bracket = Number(tmp.replace(',', ''));
-                                print('払い戻し', bracket);
-
-                            }else if(kind[j] == 'Umaren'){
-                                print('Umaren', result);
-                                text = '<td class="Payout"><span>'                            
-                                tmp = getInfo(result, text, '円', 'text');
-                                quinella = Number(tmp.replace(',', ''));
-                                print('払い戻し', quinella);
-
-                            }else if(kind[j] == 'Wide'){
-                                print('Wide', result)
-                                text = '<td class="Payout"><span>'
-                                var tmp0 = getInfo(result, text, '円', 'text');
-                                wid.push(Number(tmp0.replace(',', '')));
-
-                                text = '<td class="Payout"><span>' + tmp0 + '円<br>'
-                                var tmp1 = getInfo(result, text, '円', 'text');
-                                wid.push(Number(tmp1.replace(',', '')));
-
-                                text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
-                                tmp = getInfo(result, text, '円', 'text');
-                                wid.push(Number(tmp.replace(',', '')));
-                                print('払い戻し', wid);    
-
-                            }else if(kind[j] == 'Umatan'){
-                                print('Umatan', result);
-                                text = '<td class="Payout"><span>'                            
-                                tmp = getInfo(result, text, '円', 'text');
-                                exacta = Number(tmp.replace(',', ''));
-                                print('払い戻し', exacta);
-                                
-
-                            }else if(kind[j] == 'Fuku3'){
-                                print('Fuku3', result);
-                                text = '<td class="Payout"><span>'                            
-                                tmp = getInfo(result, text, '円', 'text');
-                                trio = Number(tmp.replace(',', ''));
-                                print('払い戻し', trio);
-
-                            }else{
-                                print('Tan3', result);
-                                text = '<td class="Payout"><span>'                            
-                                tmp = getInfo(result, text, '円', 'text');
-                                trifecta = Number(tmp.replace(',', ''));
-                                print('払い戻し', trifecta);
-                                
-                            }                         
-                        }                         
-                    }                       
-                
-                    db.Refund.create({
-                        raceId: raceId,
-                        first: first,
-                        second: second,
-                        third: third,
-                        win: win,                    
-                        place: place,
-                        bracket: bracket,
-                        quinella: quinella,
-                        wid: wid,
-                        exacta: exacta,
-                        trio: trio,
-                        trifecta: trifecta,
-
-                    });
-                    // htmlに送るデータ
-                    var data = {
-                        title: "馬券戦績",     
-                        content: bets,   
-                        err: null,                    
-                    }
-                    // 馬券戦績画面の表示
-                    res.render('bets/index', data);
-                    });
-
-                }
-
-
-            });            
-        }        
+        }                                                                                                                                          
+          
+        // htmlに送るデータ
+        var data = {
+            title: "馬券戦績",     
+            content: bets,   
+            err: null,                    
+        }
+        // 馬券戦績画面の表示
+        res.render('bets/index', data);    
+        return;                      
     });
-  });
+});
+
+function getRefund(url, raceId){    
+    // スクレイピングを開始
+    client.fetch(url, function(urlerr, $, result, body){  
+        db.Refund.findAll({         
+            where: {raceId: raceId},
+            order: [
+                ['raceId', 'DESC']
+            ]               
+
+        }).then(ref => {     
+            if(ref != ""){          
+                print("すでに結果があります", raceId);
+
+            }else{
+                // 結果を取得
+                var first;
+                var second;
+                var third;
+                var win = [];
+                var place = [];
+                var bracket;
+                var quinella;
+                var wid = [];
+                var exacta;
+                var trio;
+                var trifecta;                            
+                var kind = ['Tansho', 'Fukusho', 'Wakuren', 'Umaren', 'Wide', 'Umatan', 'Fuku3', 'Tan3'];
+
+                for(var j = 0; j < kind.length; j++){
+                    var tr = 'tr[class='+kind[j]+']';
+                    var text = "";
+                    var result = $(tr).html(); 
+                    // 結果が見つからない場合
+                    if(result == null){
+                        break;              
+                    // 結果が見つかった場合
+                    }else{
+                    // 結果を取得
+                        if(kind[j] == 'Tansho'){                                                                              
+                            text = '<td class="Payout"><span>'                            
+                            tmp = getInfo(result, text, '円', 'text');
+                            win = Number(tmp.replace(',', ''));                                    
+
+                        }else if(kind[j] == 'Fukusho'){                                
+                            text = '<td class="Result">'+'\n'+
+                                '<div><span>';
+                            tmp = getInfo(result, text, '<', 'num');
+                            first = tmp;
+
+                            text = '<div><span>'+ first +'</span></div>'+'\n'+
+                            '<div><span></span></div>'+'\n'+
+                            '<div><span></span></div><div><span>';
+                            tmp = getInfo(result, text, '<', 'num');
+                            second = tmp;
+
+                            text = '<div><span>'+second+'</span></div>'+'\n'+
+                            '<div><span></span></div>' +'\n'+
+                            '<div><span></span></div><div><span>';
+                            tmp = getInfo(result, text, '<', 'num');
+                            third = tmp;                                
+
+                            text = '<td class="Payout"><span>'
+                            var tmp0 = getInfo(result, text, '円', 'text');
+                            place.push(Number(tmp0.replace(',', '')));
+
+                            text = '<td class="Payout"><span>' + tmp0 + '円<br>'
+                            var tmp1 = getInfo(result, text, '円', 'text');
+                            place.push(Number(tmp1.replace(',', '')));
+
+                            text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
+                            tmp = getInfo(result, text, '円', 'text');
+                                place.push(Number(tmp.replace(',', '')));                                         
+
+                        }else if(kind[j] == 'Wakuren'){                                
+                            text = '<td class="Payout"><span>'                            
+                            tmp = getInfo(result, text, '円', 'text');
+                            bracket = Number(tmp.replace(',', ''));                                
+
+                        }else if(kind[j] == 'Umaren'){                                
+                            text = '<td class="Payout"><span>'                            
+                            tmp = getInfo(result, text, '円', 'text');
+                            quinella = Number(tmp.replace(',', ''));                                
+
+                        }else if(kind[j] == 'Wide'){                                
+                            text = '<td class="Payout"><span>'
+                            var tmp0 = getInfo(result, text, '円', 'text');
+                            wid.push(Number(tmp0.replace(',', '')));
+
+                        text = '<td class="Payout"><span>' + tmp0 + '円<br>'
+                            var tmp1 = getInfo(result, text, '円', 'text');
+                            wid.push(Number(tmp1.replace(',', '')));
+
+                            text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
+                            tmp = getInfo(result, text, '円', 'text');
+                            wid.push(Number(tmp.replace(',', '')));                                
+
+                        }else if(kind[j] == 'Umatan'){                                
+                            text = '<td class="Payout"><span>'                            
+                            tmp = getInfo(result, text, '円', 'text');
+                            exacta = Number(tmp.replace(',', ''));                                                                
+
+                        }else if(kind[j] == 'Fuku3'){                                
+                            text = '<td class="Payout"><span>'                            
+                            tmp = getInfo(result, text, '円', 'text');
+                            trio = Number(tmp.replace(',', ''));                                
+
+                        }else{                                
+                            text = '<td class="Payout"><span>'                            
+                            tmp = getInfo(result, text, '円', 'text');
+                            trifecta = Number(tmp.replace(',', ''));                                
+                            
+                        }                         
+                    }                             
+                }                       
+
+                db.Refund.create({
+                    raceId: raceId,
+                    first: first,
+                    second: second,
+                    third: third,
+                    win: win,                    
+                    place: place,
+                    bracket: bracket,
+                    quinella: quinella,
+                    wid: wid,
+                    exacta: exacta,
+                    trio: trio,
+                    trifecta: trifecta,
+                
+                });       
+                print("処理終了", raceId);          
+            }
+        });          
+    });   
+                                     
+    return   
+}  
 
 // レース選択画面の表示
 router.get('/select', function(req, res, next) {
@@ -433,26 +429,43 @@ router.post('/select/:id', (req, res, next) => {
             case 2: 
                 tmp = req.body.btn3;
             break;
-        }         
-        for(var j = 0; j < tmp.length; j++){
+        }            
+        
+        print('tmp', Array.isArray(tmp)); 
+        if(Array.isArray(tmp)){
+            for(var j = 0; j < tmp.length; j++){
+                switch(i){            
+                    case 0:                 
+                        elm1.push(tmp[j]);  
+                        print('elm1', elm1)        
+                    break;
+                    case 1: 
+                        elm2.push(tmp[j]);
+                    break;
+                    case 2: 
+                        elm3.push(tmp[j]); 
+                    break;
+                }        
+            }   
+        }else{
+            elmLen = 1;
             switch(i){            
                 case 0:                 
-                    elm1.push(tmp[j]);          
+                    elm1 = tmp;                        
                 break;
                 case 1: 
-                    elm2.push(tmp[j]);
+                    elm2 = tmp;  
                 break;
                 case 2: 
-                    elm3.push(tmp[j]); 
+                    elm3 = tmp;  
                 break;
             }        
-        
-        }        
+        }             
     }
     
     var elm = [elm1, elm2, elm3];
 
-    // 組み合わせ総数を取得
+    // 組み合わせ総数を取得    
     var combNum = calcCombNum(kind, comb, combArr, elm);    
     if(comb == "フォーメーション"){
         var combDel = 0;
@@ -614,43 +627,49 @@ router.post('/select/:id', (req, res, next) => {
                 break;
             }
             // 買った馬を登録      
+            
             for(var i = 0; i < elmLen; i++){
-                for(var j = 0; j < elm[i].length; j++){                    
-                    if((n+1) == elm[i][j]){
-                        name = tmp;
-                        
-                        if(kind == kindArr[2] || kind == kindArr[3] || kind == kindArr[4] || kind == kindArr[5]){                            
-                            if(comb != "通常" && comb != "ボックス" && comb != "フォーメーション"){
-                                if(i == 0){
-                                    horseMoney += money;
+                if(Array.isArray(elm[i])){
+                    for(var j = 0; j < elm[i].length; j++){                    
+                        if((n+1) == elm[i][j]){
+                            name = tmp;
+                            
+                            if(kind == kindArr[2] || kind == kindArr[3] || kind == kindArr[4] || kind == kindArr[5]){                            
+                                if(comb != "通常" && comb != "ボックス" && comb != "フォーメーション"){
+                                    if(i == 0){
+                                        horseMoney += money;
+                                    }else{
+                                        horseMoney += money/combNum;
+                                    }
+        
+                                }else if(comb == "ボックス"){                                
+                                    horseMoney = money*2/combNum; 
+                                }else{
+                                    horseMoney += money/combNum;
+                                }
+                            }else if(kind == kindArr[6] || kind == kindArr[7]){
+                                if(comb != "通常" && comb != "ボックス" && comb != "フォーメーション"){
+                                    if(elm[i].length == 1){
+                                        horseMoney += money;
+                                    }else{
+                                        horseMoney += money/combNum;
+                                    }
+        
+                                }else if(comb == "ボックス"){                                
+                                    horseMoney = money*3/combNum; 
                                 }else{
                                     horseMoney += money/combNum;
                                 }
     
-                            }else if(comb == "ボックス"){                                
-                                horseMoney = money*2/combNum; 
                             }else{
                                 horseMoney += money/combNum;
-                            }
-                        }else if(kind == kindArr[6] || kind == kindArr[7]){
-                            if(comb != "通常" && comb != "ボックス" && comb != "フォーメーション"){
-                                if(elm[i].length == 1){
-                                    horseMoney += money;
-                                }else{
-                                    horseMoney += money/combNum;
-                                }
-    
-                            }else if(comb == "ボックス"){                                
-                                horseMoney = money*3/combNum; 
-                            }else{
-                                horseMoney += money/combNum;
-                            }
+                            }                                         
+                        }
+                    }       
+                }else{
+                    horseMoney += money;
 
-                        }else{
-                            horseMoney += money/combNum;
-                        }                                         
-                    }
-                }       
+                }                
             }
             if(horseMoney != 0){
                 print("name", name);
@@ -828,13 +847,21 @@ function calcCombNum(k, c, cArr, btn){
     var combNum = 0;
     switch(k){
         // 単勝
-        case kindArr[0]:            
-            combNum = btn[0].length;            
+        case kindArr[0]:        
+            if(Array.isArray(btn[0])){
+                combNum = btn[0].length;            
+            }else{
+                combNum = 1;
+            }           
             break;
 
         // 複勝
         case kindArr[1]:
-            combNum = btn[0].length;       
+            if(Array.isArray(btn[0])){
+                combNum = btn[0].length;            
+            }else{
+                combNum = 1;
+            }    
             break;
 
         // 枠連
@@ -847,7 +874,11 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // ながし
                 case cArr[1]:
-                    combNum = btn[1].length; 
+                    if(Array.isArray(btn[1])){
+                        combNum = btn[1].length;            
+                    }else{
+                        combNum = 1;
+                    }
                 
                 break;
                 // ボックス
@@ -857,8 +888,16 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // フォーメーション
                 case cArr[3]:
-                    combNum = btn[0].length * btn[1].length;
-                
+                    if(Array.isArray(btn[0]) && Array.isArray(btn[1])){
+                        combNum = 1;         
+                    }else if(Array.isArray(btn[0])){
+                        combNum = btn[1].length;
+                    }else if(Array.isArray(btn[1])){
+                        combNum = btn[0].length;
+                    }else{
+                        combNum = btn[0].length * btn[1].length;
+
+                    }                                
                 break;
 
             }
@@ -875,19 +914,32 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // ながし
                 case cArr[1]:
-                    combNum = btn[1].length;
+                    if(Array.isArray(btn[1])){
+                        combNum = btn[1].length;            
+                    }else{
+                        combNum = 1;
+                    }
                 
                 break;
                 // ボックス
                 case cArr[2]:
-                    combNum = btn[0].length*(btn[0].length - 1)/2;                      
+                    combNum = btn[0].length*(btn[0].length - 1)/2;                     
                 
                 break;
                 // フォーメーション
                 case cArr[3]:
-                    combNum = btn[0].length * btn[1].length;
-                
+                    if(Array.isArray(btn[0]) && Array.isArray(btn[1])){
+                        combNum = 1;         
+                    }else if(Array.isArray(btn[0])){
+                        combNum = btn[1].length;
+                    }else if(Array.isArray(btn[1])){
+                        combNum = btn[0].length;
+                    }else{
+                        combNum = btn[0].length * btn[1].length;
+
+                    }                                
                 break;
+
 
             }
             break;
@@ -902,18 +954,30 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // ながし
                 case cArr[1]:
-                    combNum = btn[1].length;
+                    if(Array.isArray(btn[1])){
+                        combNum = btn[1].length;            
+                    }else{
+                        combNum = 1;
+                    }
                 
                 break;
                 // ボックス
                 case cArr[2]:
-                    combNum = btn[0].length*(btn[0].length - 1)/2;                      
+                    combNum = btn[0].length*(btn[0].length - 1)/2;                     
                 
                 break;
                 // フォーメーション
                 case cArr[3]:
-                    combNum = btn[0].length * btn[1].length;
-                
+                    if(Array.isArray(btn[0]) && Array.isArray(btn[1])){
+                        combNum = 1;         
+                    }else if(Array.isArray(btn[0])){
+                        combNum = btn[1].length;
+                    }else if(Array.isArray(btn[1])){
+                        combNum = btn[0].length;
+                    }else{
+                        combNum = btn[0].length * btn[1].length;
+
+                    }                                
                 break;
 
             }
@@ -929,12 +993,20 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // 1着ながし
                 case cArr[1]:
-                    combNum = btn[1].length;
+                    if(Array.isArray(btn[1])){
+                        combNum = btn[1].length;            
+                    }else{
+                        combNum = 1;
+                    }                    
                 
                 break;
                 // 2着ながし
                 case cArr[2]:
-                    combNum = btn[0].length;
+                    if(Array.isArray(btn[0])){
+                        combNum = btn[0].length;            
+                    }else{
+                        combNum = 1;
+                    }                    
                 
                 break;
                 // ボックス
@@ -944,7 +1016,16 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // フォーメーション
                 case cArr[4]:
-                    combNum = btn[0].length * btn[1].length;
+                    if(Array.isArray(btn[0]) && Array.isArray(btn[1])){
+                        combNum = 1;         
+                    }else if(Array.isArray(btn[0])){
+                        combNum = btn[1].length;
+                    }else if(Array.isArray(btn[1])){
+                        combNum = btn[0].length;
+                    }else{
+                        combNum = btn[0].length * btn[1].length;
+
+                    }   
                 
                 break;
 
@@ -966,7 +1047,13 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // 軸2頭ながし
                 case cArr[2]:
-                    combNum = btn[2].length;  
+                    if(Array.isArray(btn[2])){
+                        combNum = btn[2].length;  
+
+                    }else{
+                        combNum = 1;
+
+                    }                       
                 
                 break;
                 // ボックス
@@ -976,7 +1063,25 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // フォーメーション
                 case cArr[4]:
-                    combNum = btn[0].length*btn[1].length*btn[2].length;  
+                    if(Array.isArray(btn[0]) && Array.isArray(btn[1]) && Array.isArray(btn[2])){
+                        combNum = 1;         
+                    }else if(Array.isArray(btn[0]) && Array.isArray(btn[1])){
+                        combNum = btn[2].length;  
+                    }else if(Array.isArray(btn[0]) && Array.isArray(btn[2])){
+                        combNum = btn[1].length;  
+                    }else if(Array.isArray(btn[1]) && Array.isArray(btn[2])){
+                        combNum = btn[0].length;  
+                    }else if(Array.isArray(btn[0])){
+                        combNum = btn[1].length*btn[2].length;  
+                    }else if(Array.isArray(btn[1])){
+                        combNum = btn[0].length*btn[2].length;  
+                    }else if(Array.isArray(btn[2])){
+                        combNum = btn[0].length*btn[1].length;  
+                    }else{
+                        combNum = btn[0].length*btn[1].length*btn[2].length;  
+
+                    }   
+                    
                 
                 break;                
 
@@ -1009,17 +1114,35 @@ function calcCombNum(k, c, cArr, btn){
                 break;
                 // 1・2着ながし
                 case cArr[4]:
-                    combNum = btn[2].length;  
+                    if(Array.isArray(btn[2])){
+                        combNum = btn[2].length;  
+
+                    }else{
+                        combNum = 1;
+
+                    }                         
                 
                 break;     
                 // 1・3着ながし           
                 case cArr[5]:
-                    combNum = btn[1].length;
+                    if(Array.isArray(btn[1])){
+                        combNum = btn[1].length;  
+
+                    }else{
+                        combNum = 1;
+
+                    }                         
                 
                 break;             
                 // 2・3着ながし   
                 case cArr[6]:
-                    combNum = btn[1].length;
+                    if(Array.isArray(btn[0])){
+                        combNum = btn[0].length;  
+
+                    }else{
+                        combNum = 1;
+
+                    }                         
                 
                 break;             
                 // ボックス   
@@ -1028,8 +1151,24 @@ function calcCombNum(k, c, cArr, btn){
                 // フォーメーションs
                 break;                
                 case cArr[8]:
-                    combNum = btn[0].length*btn[1].length*btn[2].length;                     
-                
+                    if(Array.isArray(btn[0]) && Array.isArray(btn[1]) && Array.isArray(btn[2])){
+                        combNum = 1;         
+                    }else if(Array.isArray(btn[0]) && Array.isArray(btn[1])){
+                        combNum = btn[2].length;  
+                    }else if(Array.isArray(btn[0]) && Array.isArray(btn[2])){
+                        combNum = btn[1].length;  
+                    }else if(Array.isArray(btn[1]) && Array.isArray(btn[2])){
+                        combNum = btn[0].length;  
+                    }else if(Array.isArray(btn[0])){
+                        combNum = btn[1].length*btn[2].length;  
+                    }else if(Array.isArray(btn[1])){
+                        combNum = btn[0].length*btn[2].length;  
+                    }else if(Array.isArray(btn[2])){
+                        combNum = btn[0].length*btn[1].length;  
+                    }else{
+                        combNum = btn[0].length*btn[1].length*btn[2].length;  
+
+                    }                                       
                 break;                                          
 
             }        
