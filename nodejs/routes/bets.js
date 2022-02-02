@@ -52,28 +52,28 @@ router.get('/', function(req, res, next) {
             ['raceId', 'DESC']
         ]         
     }).then(bets => {    
-        db.Horse.findAll({
-            order: [
-                ['betId', 'DESC']
-            ]         
-        }).then(horse => {   
-            hoge(req, res, bets, horse);    
-
-        })
+        hoge(req, res, bets);    
+       
     })    
 });
 
-async function hoge(req, res, bets, horse){    
+async function hoge(req, res, bets){    
     try{
         var betsResult = [];
         if(bets != ''){
             if(Array.isArray(bets)){
-                for(var i in bets){                                        
+                for(var i in bets){      
+
+                    print("払い戻しが保存してあるか確認します", ""); 
+                    var url = createUrl(bets[i].raceId, 'result');                      
+                    var hoge = await setRefund(url, bets[i].raceId);
+                    print("払い戻しが保存してあるか確認しました", "");                                 
                     var tmp = await searchBetRefund(bets[i]);                    
                     betsResult.push(tmp);                                                           
                 }
 
             }else{
+                var hoge = await setRefund(url, bets.raceId);   
                 var tmp =  await searchBetRefund(bets);
                 betsResult.push(tmp);                
             }
@@ -81,28 +81,25 @@ async function hoge(req, res, bets, horse){
         }else{             
             betsResult = '';
 
+        }       
+
+        var horse = await getHorse();   
+        if(horse == ''){
+
         }         
                             
-        var horseRef = []
-        if(Array.isArray(horse)){
-            for(var i in horse){
-                print("i", i);
-                for(var j in betsResult){
-                    print("j", j);
-                    print(horse[i].betId, betsResult[j].id);
-                    print('refund', betsResult.refund[j])
-                    if(horse[i].betId == betsResult[j].id){   
-                        var tmp = betsResult.refund[j];                 
-                        horseRef.push(tmp);
-                        print("hoge", "hoge");
+        var horseRef = []        
+        
+        for(var i =0; i < horse.length; i++){            
+            for(var j = 0; j < betsResult.length; j++){                
+                if(horse[i].betId == betsResult[j].id){   
+                    var tmp = betsResult[j].refund;                                     
+                    horseRef.push(tmp);                    
 
-                    }
-                }               
-            }
-        }else{
-            horseRef.push(betsResult.refund);
-        }        
-        print("表示sます", "hoge");
+                }
+            }               
+        }
+                      
         // htmlに送るデータ
         var data = {
             title: "馬券戦績",     
@@ -111,8 +108,7 @@ async function hoge(req, res, bets, horse){
             horseRef: horseRef,                     
             err: null,                    
         }
-        // 馬券戦績画面の表示
-        print("表示sます", "hoge");
+        // 馬券戦績画面の表示        
         res.render('bets/index', data);            
         return;       
     }catch(err){
@@ -120,16 +116,29 @@ async function hoge(req, res, bets, horse){
     }     
     
 }
+async function getHorse(){
+    return new Promise((resolve, reject) => {
+        db.Horse.findAll({
+            order: [
+                ['name', 'ASC'],
+                ['raceId', 'DESC']
+            ]         
+        }).then(horse => {   
+            resolve(horse);
+
+        })          
+    })                                    
+}  
+
 
 // 馬券の払い戻しを取得
 async function searchBetRefund(bet){       
     return new Promise((resolve, reject) => {
         //ちょっと時間がかかる処理        
-        var url = createUrl(bet.raceId, 'result');         
-        setRefund(url, bet.raceId);        
+        var url = createUrl(bet.raceId, 'result');                         
         db.Refund.findOne({
             where: {raceId: bet.raceId},        
-        }).then(ref => {            
+        }).then(ref => {                     
             // buy, refundを求める
             var buy = [];                                                          
             
@@ -151,17 +160,14 @@ async function searchBetRefund(bet){
             var buyText = "";  
             // 払い戻しを求める            
             // 単勝
-            if(bet.kind == kindArr[0]){  
-                print("Array?", Array.isArray(buy));
+            if(bet.kind == kindArr[0]){                  
                 if(Array.isArray(buy)){
-                    for(var i = 0; i < buy.length-1; i++){
-                        print('i', i);
+                    for(var i = 0; i < buy.length-1; i++){                        
                         if(buy[i] == ref.first){
                             refund = (bet.money/bet.combNum) * ref.win / 100;
                         }
                         buyText += String(buy[i]);
-                        if(i != buy.length-2){
-                            print('hoge', "hoge");
+                        if(i != buy.length-2){                            
                             buyText += ', '
                         }
                     }   
@@ -177,11 +183,14 @@ async function searchBetRefund(bet){
                 var tmp = "";
                 for(var i in ref.place){
                     if(ref.place[i] == ','){
-                        oz.push(Number(tmp));                        
+                        oz.push(Number(tmp));  
+                        tmp = "";                      
                     }else{
                         tmp += ref.place[i];
                     }
+                    
                 }
+                oz.push(Number(tmp));  
                 if(Array.isArray(buy)){                    
                     for(var i = 0; i < buy.length-1; i++){                        
                         if(buy[i] == ref.first){
@@ -194,8 +203,7 @@ async function searchBetRefund(bet){
                             refund += (bet.money/bet.combNum) * oz[2] / 100;
                         }
                         buyText += String(buy[i]);
-                        if(i != buy.length-2){
-                            print('hoge', "hoge");
+                        if(i != buy.length-2){ 
                             buyText += ', '
                         }
                     }   
@@ -236,22 +244,24 @@ async function searchBetRefund(bet){
             }else if(bet.kind == kindArr[4]){
                 var oz = []
                 var tmp = "";
-                for(var i in ref.wid){
-                    if(ref.wid[i] == ','){
-                        oz.push(Number(tmp));                        
+                for(var i in ref.wid){                    
+                    if(ref.wid[i] == ','){                        
+                        oz.push(Number(tmp));  
+                        tmp = "";                      
                     }else{
                         tmp += ref.wid[i];
-                    }
+                    }                                        
                 }
+                oz.push(Number(tmp));                  
                 if(bet.comb == "通常"){                                                             
-                    if(buy[0] == ref.first || buy[1] == ref.first && buy[0] == ref.second || buy[1] == ref.second){
+                    if((buy[0] == ref.first || buy[1] == ref.first) && (buy[0] == ref.second || buy[1] == ref.second)){
                         refund += bet.money * oz[0] / 100;
                         
                     }
-                    if(buy[0] == ref.first || buy[1] == ref.first && buy[0] == ref.third || buy[1] == ref.third){
+                    if((buy[0] == ref.first || buy[1] == ref.first) && (buy[0] == ref.third || buy[1] == ref.third)){
                         refund += bet.money * oz[1] / 100;
                     }
-                    if(buy[0] == ref.second || buy[1] == ref.second && buy[0] == ref.third || buy[1] == ref.third){
+                    if((buy[0] == ref.second || buy[1] == ref.second) && (buy[0] == ref.third || buy[1] == ref.third)){
                         refund += bet.money * oz[2] / 100;
                     }
                     buyText = String(buy[0]) + " - " + String(buy[1]);                    
@@ -297,8 +307,6 @@ async function searchBetRefund(bet){
                 
             }
 
-            print("Text", buyText);   
-            print('refund', refund);                     
             
             var raceIdStr = String(bet.raceId)
             var yearStr = raceIdStr.substring(0, 4);
@@ -325,139 +333,146 @@ async function searchBetRefund(bet){
 }
 
 // 払い戻しをホームページから取得
-function setRefund(url, raceId){    
-    // スクレイピングを開始
-    client.fetch(url, function(urlerr, $, result, body){  
-        db.Refund.findAll({         
-            where: {raceId: raceId},
-            order: [
-                ['raceId', 'DESC']
-            ]               
+async function setRefund(url, raceId){   
+    return new Promise((resolve, reject) => {     
+        // スクレイピングを開始
+        client.fetch(url, function(urlerr, $, result, body){  
+            db.Refund.findAll({         
+                where: {raceId: raceId},
+                order: [
+                    ['raceId', 'DESC']
+                ]               
 
-        }).then(ref => {     
-            if(ref != ""){                          
+            }).then(ref => {     
+                if(ref != ""){  
+                    print("すでに払い戻しがあります", ref.raceId);                        
 
-            }else{
-                // 結果を取得
-                var first;
-                var second;
-                var third;
-                var win = [];
-                var place = [];
-                var bracket;
-                var quinella;
-                var wid = [];
-                var exacta;
-                var trio;
-                var trifecta;                            
-                var kind = ['Tansho', 'Fukusho', 'Wakuren', 'Umaren', 'Wide', 'Umatan', 'Fuku3', 'Tan3'];
-
-                for(var j = 0; j < kind.length; j++){
-                    var tr = 'tr[class='+kind[j]+']';
-                    var text = "";
-                    var result = $(tr).html(); 
-                    // 結果が見つからない場合
-                    if(result == null){
-                        break;              
-                    // 結果が見つかった場合
-                    }else{
+                }else{
+                    print("払い戻しを保存します", ref.raceId);  
                     // 結果を取得
-                        if(kind[j] == 'Tansho'){                                                                              
-                            text = '<td class="Payout"><span>'                            
-                            tmp = getInfo(result, text, '円', 'text');
-                            win = Number(tmp.replace(',', ''));                                    
+                    var first;
+                    var second;
+                    var third;
+                    var win = [];
+                    var place = [];
+                    var bracket;
+                    var quinella;
+                    var wid = [];
+                    var exacta;
+                    var trio;
+                    var trifecta;                            
+                    var kind = ['Tansho', 'Fukusho', 'Wakuren', 'Umaren', 'Wide', 'Umatan', 'Fuku3', 'Tan3'];
 
-                        }else if(kind[j] == 'Fukusho'){                                
-                            text = '<td class="Result">'+'\n'+
-                                '<div><span>';
-                            tmp = getInfo(result, text, '<', 'num');
-                            first = tmp;
+                    for(var j = 0; j < kind.length; j++){
+                        var tr = 'tr[class='+kind[j]+']';
+                        var text = "";
+                        var result = $(tr).html(); 
+                        // 結果が見つからない場合
+                        if(result == null){
+                            break;              
+                        // 結果が見つかった場合
+                        }else{
+                        // 結果を取得
+                            if(kind[j] == 'Tansho'){                                                                              
+                                text = '<td class="Payout"><span>'                            
+                                tmp = getInfo(result, text, '円', 'text');
+                                win = Number(tmp.replace(',', ''));                                    
 
-                            text = '<div><span>'+ first +'</span></div>'+'\n'+
-                            '<div><span></span></div>'+'\n'+
-                            '<div><span></span></div><div><span>';
-                            tmp = getInfo(result, text, '<', 'num');
-                            second = tmp;
+                            }else if(kind[j] == 'Fukusho'){                                
+                                text = '<td class="Result">'+'\n'+
+                                    '<div><span>';
+                                tmp = getInfo(result, text, '<', 'num');
+                                first = tmp;
 
-                            text = '<div><span>'+second+'</span></div>'+'\n'+
-                            '<div><span></span></div>' +'\n'+
-                            '<div><span></span></div><div><span>';
-                            tmp = getInfo(result, text, '<', 'num');
-                            third = tmp;                                
+                                text = '<div><span>'+ first +'</span></div>'+'\n'+
+                                '<div><span></span></div>'+'\n'+
+                                '<div><span></span></div><div><span>';
+                                tmp = getInfo(result, text, '<', 'num');
+                                second = tmp;
 
-                            text = '<td class="Payout"><span>'
-                            var tmp0 = getInfo(result, text, '円', 'text');
-                            place.push(Number(tmp0.replace(',', '')));
+                                text = '<div><span>'+second+'</span></div>'+'\n'+
+                                '<div><span></span></div>' +'\n'+
+                                '<div><span></span></div><div><span>';
+                                tmp = getInfo(result, text, '<', 'num');
+                                third = tmp;                                
+
+                                text = '<td class="Payout"><span>'
+                                var tmp0 = getInfo(result, text, '円', 'text');
+                                place.push(Number(tmp0.replace(',', '')));
+
+                                text = '<td class="Payout"><span>' + tmp0 + '円<br>'
+                                var tmp1 = getInfo(result, text, '円', 'text');
+                                place.push(Number(tmp1.replace(',', '')));
+
+                                text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
+                                tmp = getInfo(result, text, '円', 'text');
+                                    place.push(Number(tmp.replace(',', '')));                                         
+
+                            }else if(kind[j] == 'Wakuren'){                                
+                                text = '<td class="Payout"><span>'                            
+                                tmp = getInfo(result, text, '円', 'text');
+                                bracket = Number(tmp.replace(',', ''));                                
+
+                            }else if(kind[j] == 'Umaren'){                                
+                                text = '<td class="Payout"><span>'                            
+                                tmp = getInfo(result, text, '円', 'text');
+                                quinella = Number(tmp.replace(',', ''));                                
+
+                            }else if(kind[j] == 'Wide'){                                
+                                text = '<td class="Payout"><span>'
+                                var tmp0 = getInfo(result, text, '円', 'text');
+                                wid.push(Number(tmp0.replace(',', '')));
 
                             text = '<td class="Payout"><span>' + tmp0 + '円<br>'
-                            var tmp1 = getInfo(result, text, '円', 'text');
-                            place.push(Number(tmp1.replace(',', '')));
+                                var tmp1 = getInfo(result, text, '円', 'text');
+                                wid.push(Number(tmp1.replace(',', '')));
 
-                            text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
-                            tmp = getInfo(result, text, '円', 'text');
-                                place.push(Number(tmp.replace(',', '')));                                         
+                                text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
+                                tmp = getInfo(result, text, '円', 'text');
+                                wid.push(Number(tmp.replace(',', '')));                                
 
-                        }else if(kind[j] == 'Wakuren'){                                
-                            text = '<td class="Payout"><span>'                            
-                            tmp = getInfo(result, text, '円', 'text');
-                            bracket = Number(tmp.replace(',', ''));                                
+                            }else if(kind[j] == 'Umatan'){                                
+                                text = '<td class="Payout"><span>'                            
+                                tmp = getInfo(result, text, '円', 'text');
+                                exacta = Number(tmp.replace(',', ''));                                                                
 
-                        }else if(kind[j] == 'Umaren'){                                
-                            text = '<td class="Payout"><span>'                            
-                            tmp = getInfo(result, text, '円', 'text');
-                            quinella = Number(tmp.replace(',', ''));                                
+                            }else if(kind[j] == 'Fuku3'){                                
+                                text = '<td class="Payout"><span>'                            
+                                tmp = getInfo(result, text, '円', 'text');
+                                trio = Number(tmp.replace(',', ''));                                
 
-                        }else if(kind[j] == 'Wide'){                                
-                            text = '<td class="Payout"><span>'
-                            var tmp0 = getInfo(result, text, '円', 'text');
-                            wid.push(Number(tmp0.replace(',', '')));
+                            }else{                                
+                                text = '<td class="Payout"><span>'                            
+                                tmp = getInfo(result, text, '円', 'text');
+                                trifecta = Number(tmp.replace(',', ''));                                
+                                
+                            }                         
+                        }                             
+                    }                       
 
-                        text = '<td class="Payout"><span>' + tmp0 + '円<br>'
-                            var tmp1 = getInfo(result, text, '円', 'text');
-                            wid.push(Number(tmp1.replace(',', '')));
+                    db.Refund.create({
+                        raceId: raceId,
+                        first: first,
+                        second: second,
+                        third: third,
+                        win: win,                    
+                        place: place,
+                        bracket: bracket,
+                        quinella: quinella,
+                        wid: wid,
+                        exacta: exacta,
+                        trio: trio,
+                        trifecta: trifecta,
+                    
+                    });                       
+                    print("払い戻しを保存しました", ref.raceId);                           
+                }            
+                print("処理の終了", ref.raceId);       
+                resolve(0);
 
-                            text = '<td class="Payout"><span>'+ tmp0 + '円<br>'+ tmp1 + '円<br>'
-                            tmp = getInfo(result, text, '円', 'text');
-                            wid.push(Number(tmp.replace(',', '')));                                
-
-                        }else if(kind[j] == 'Umatan'){                                
-                            text = '<td class="Payout"><span>'                            
-                            tmp = getInfo(result, text, '円', 'text');
-                            exacta = Number(tmp.replace(',', ''));                                                                
-
-                        }else if(kind[j] == 'Fuku3'){                                
-                            text = '<td class="Payout"><span>'                            
-                            tmp = getInfo(result, text, '円', 'text');
-                            trio = Number(tmp.replace(',', ''));                                
-
-                        }else{                                
-                            text = '<td class="Payout"><span>'                            
-                            tmp = getInfo(result, text, '円', 'text');
-                            trifecta = Number(tmp.replace(',', ''));                                
-                            
-                        }                         
-                    }                             
-                }                       
-
-                db.Refund.create({
-                    raceId: raceId,
-                    first: first,
-                    second: second,
-                    third: third,
-                    win: win,                    
-                    place: place,
-                    bracket: bracket,
-                    quinella: quinella,
-                    wid: wid,
-                    exacta: exacta,
-                    trio: trio,
-                    trifecta: trifecta,
-                
-                });                            
-            }            
-            return   
-        });          
-    });       
+            });          
+        });       
+    })
 }  
 
 // データを削除する
@@ -1659,8 +1674,8 @@ function getType(k, c, cArr){
                 break;
                 // 2着ながし
                 case cArr[2]:
-                    type[0] = typeArr[0];
-                    type[1] = typeArr[1];
+                    type[0] = typeArr[1];
+                    type[1] = typeArr[0];
                     type[2] = typeArr[2]; 
                 
                 break;
@@ -1766,15 +1781,15 @@ function getType(k, c, cArr){
                 // 1・3着ながし           
                 case cArr[5]:
                     type[0] = typeArr[1];
-                    type[1] = typeArr[0];
-                    type[2] = typeArr[1]; 
+                    type[1] = typeArr[1];
+                    type[2] = typeArr[0]; 
                 
                 break;             
                 // 2・3着ながし   
                 case cArr[6]:
-                    type[0] = typeArr[0];
+                    type[0] = typeArr[1];
                     type[1] = typeArr[1];
-                    type[2] = typeArr[1]; 
+                    type[2] = typeArr[0]; 
                 
                 break;             
                 // ボックス   
