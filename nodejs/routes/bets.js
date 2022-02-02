@@ -5,6 +5,9 @@ const { Op, col } = require('sequelize');
 const client = require('cheerio-httpcli');
 const { text } = require('express');
 const refund = require('../models/refund');
+const horse = require('../models/horse');
+const { search } = require('.');
+const e = require('express');
 
 const placeArr = ["札幌", "函館", "福島", "新潟", "東京", 
                     "中山", "中京", "京都", "阪神", "小倉"];
@@ -15,6 +18,7 @@ const kindArr = ["単勝", "複勝", "枠連", "馬連", "ワイド",
 // デバック用
 function print(type, data){
     console.log(type + ": " + data);
+    return;
 
 }
 
@@ -30,75 +34,295 @@ function checkLogin(req, res){
     }
 }
 
+//setTimeoutをいちいち書くのが面倒なので関数化
+function Timeout(passVal, ms) {
+    return new Promise(resolve =>
+        setTimeout(() => {
+              resolve(passVal);
+      }, ms)
+        )
+  }
+
 // 馬券戦績画面の表示
 router.get('/', function(req, res, next) {
     // ログインのチェック
-    if (checkLogin(req,res)){ return };   
-    db.Horse.findAll({   
-        where: {userId: req.session.login.id},
+    if (checkLogin(req,res)){ return };  
+    db.BettingTicket.findAll({
         order: [
             ['raceId', 'DESC']
-        ]             
-    }).then(hoese => {     
-        db.BettingTicket.findAll({   
-            where: {userId: req.session.login.id},
+        ]         
+    }).then(bets => {    
+        db.Horse.findAll({
             order: [
-                ['raceId', 'DESC']
-            ]             
-        }).then(bets => {        
-            if(bets == ""){            
-                print("該当なし", "");  
-                // htmlに送るデータ
-                var data = {
-                    title: "馬券戦績",     
-                    bet: bets,   
-                    horse: hoese,
-                    err: null,                    
-                }
-                // 馬券戦績画面の表示
-                res.render('bets/index', data);    
-                return;     
-            }      
-            var raceId;
-            
-            if(Array.isArray(bets)){
-                for(var i = 0; i < bets.length; i++){
-                    raceId = bets[i].raceId;  
-                    var url = createUrl(raceId, "result"); 
-                    setRefund(url, raceId);
-    
-                }              
-            }else{
-                raceId = bets.raceId;
-                var url = createUrl(raceId, "result"); 
-                setRefund(url, raceId);
-    
-            }            
-            
-            db.Refund.findAll({                                       
-                order: [
-                    ['raceId', 'DESC']
-                ]               
-        
-            }).then(ref => {    
+                ['betId', 'DESC']
+            ]         
+        }).then(horse => {   
+            hoge(req, res, bets, horse);    
 
-                // htmlに送るデータ
-                var data = {
-                    title: "馬券戦績",     
-                    bet: bets,   
-                    horse: hoese,
-                    refund: ref,
-                    err: null,                    
-                }
-                // 馬券戦績画面の表示
-                res.render('bets/index', data);    
-                return;  
-
-    
-            });                                   
-        });    
-    });
+        })
+    })    
 });
+
+async function hoge(req, res, bets, horse){    
+    try{
+        var betsResult = [];
+        if(bets != ''){
+            if(Array.isArray(bets)){
+                for(var i in bets){                                        
+                    var tmp = await searchBetRefund(bets[i]);                    
+                    betsResult.push(tmp);                                                           
+                }
+
+            }else{
+                var tmp =  await searchBetRefund(bets);
+                betsResult.push(tmp);                
+            }
+
+        }else{             
+            betsResult = '';
+
+        }         
+                            
+        var horseRef = []
+        if(Array.isArray(horse)){
+            for(var i in horse){
+                print("i", i);
+                for(var j in betsResult){
+                    print("j", j);
+                    print(horse[i].betId, betsResult[j].id);
+                    print('refund', betsResult.refund[j])
+                    if(horse[i].betId == betsResult[j].id){   
+                        var tmp = betsResult.refund[j];                 
+                        horseRef.push(tmp);
+                        print("hoge", "hoge");
+
+                    }
+                }               
+            }
+        }else{
+            horseRef.push(betsResult.refund);
+        }        
+        print("表示sます", "hoge");
+        // htmlに送るデータ
+        var data = {
+            title: "馬券戦績",     
+            bet: betsResult,    
+            horse: horse,
+            horseRef: horseRef,                     
+            err: null,                    
+        }
+        // 馬券戦績画面の表示
+        print("表示sます", "hoge");
+        res.render('bets/index', data);            
+        return;       
+    }catch(err){
+
+    }     
+    
+}
+
+// 馬券の払い戻しを取得
+async function searchBetRefund(bet){       
+    return new Promise((resolve, reject) => {
+        //ちょっと時間がかかる処理        
+        var url = createUrl(bet.raceId, 'result');         
+        setRefund(url, bet.raceId);        
+        db.Refund.findOne({
+            where: {raceId: bet.raceId},        
+        }).then(ref => {            
+            // buy, refundを求める
+            var buy = [];                                                          
+            
+            var tmp = '';
+            // 買い目を求める
+            for(var i in bet.elm){                    
+                if(bet.elm[i] == ','){
+                    buy.push(Number(tmp));  
+                    tmp = '';                      
+                }else{
+                    tmp += bet.elm[i];
+                }
+            } 
+            print('buy', buy);
+            print('buy[0]', buy[0]);
+            print('len', buy.length);
+            
+            var refund = 0;   
+            var buyText = "";  
+            // 払い戻しを求める            
+            // 単勝
+            if(bet.kind == kindArr[0]){  
+                print("Array?", Array.isArray(buy));
+                if(Array.isArray(buy)){
+                    for(var i = 0; i < buy.length-1; i++){
+                        print('i', i);
+                        if(buy[i] == ref.first){
+                            refund = (bet.money/bet.combNum) * ref.win / 100;
+                        }
+                        buyText += String(buy[i]);
+                        if(i != buy.length-2){
+                            print('hoge', "hoge");
+                            buyText += ', '
+                        }
+                    }   
+                }else{
+                    if(buy == ref.first){
+                        refund = (bet.money/bet.combNum) * ref.win / 100;
+                    }
+                    buyText = String(buy);
+                }                                                                          
+            // 複勝                 
+            }else if(bet.kind == kindArr[1]){
+                var oz = []
+                var tmp = "";
+                for(var i in ref.place){
+                    if(ref.place[i] == ','){
+                        oz.push(Number(tmp));                        
+                    }else{
+                        tmp += ref.place[i];
+                    }
+                }
+                if(Array.isArray(buy)){                    
+                    for(var i = 0; i < buy.length-1; i++){                        
+                        if(buy[i] == ref.first){
+                            refund += (bet.money/bet.combNum) * oz[0] / 100;
+                        }
+                        if(buy[i] == ref.second){
+                            refund += (bet.money/bet.combNum) * oz[1] / 100;
+                        }
+                        if(buy[i] == ref.third){
+                            refund += (bet.money/bet.combNum) * oz[2] / 100;
+                        }
+                        buyText += String(buy[i]);
+                        if(i != buy.length-2){
+                            print('hoge', "hoge");
+                            buyText += ', '
+                        }
+                    }   
+                }else{
+                    if(buy == ref.first){
+                        refund += (bet.money/bet.combNum) * oz[0] / 100;
+                    }
+                    if(buy == ref.second){
+                        refund += (bet.money/bet.combNum) * oz[1] / 100;
+                    }
+                    if(buy == ref.third){
+                        refund += (bet.money/bet.combNum) * oz[2] / 100;
+                    }
+                    buyText = String(buy);
+                }         
+                
+            // 枠連（未実装）    
+            }else if(bet.kind == kindArr[2]){                                
+
+            // 馬連
+            }else if(bet.kind == kindArr[3]){     
+                if(bet.comb == "通常"){                                                             
+                    if(buy[0] == ref.first || buy[0] == ref.second){
+                        if(buy[1] == ref.first || buy[1] == ref.second){
+                            refund = bet.money * ref.quinella / 100;
+                        }
+                        
+                    }
+                    buyText = String(buy[0]) + " - " + String(buy[1]);                    
+                
+                }else if(bet.comb == "ながし"){          
+
+                }else if(bet.comb == "ボックス"){
+
+                }               
+                
+            // ワイド
+            }else if(bet.kind == kindArr[4]){
+                var oz = []
+                var tmp = "";
+                for(var i in ref.wid){
+                    if(ref.wid[i] == ','){
+                        oz.push(Number(tmp));                        
+                    }else{
+                        tmp += ref.wid[i];
+                    }
+                }
+                if(bet.comb == "通常"){                                                             
+                    if(buy[0] == ref.first || buy[1] == ref.first && buy[0] == ref.second || buy[1] == ref.second){
+                        refund += bet.money * oz[0] / 100;
+                        
+                    }
+                    if(buy[0] == ref.first || buy[1] == ref.first && buy[0] == ref.third || buy[1] == ref.third){
+                        refund += bet.money * oz[1] / 100;
+                    }
+                    if(buy[0] == ref.second || buy[1] == ref.second && buy[0] == ref.third || buy[1] == ref.third){
+                        refund += bet.money * oz[2] / 100;
+                    }
+                    buyText = String(buy[0]) + " - " + String(buy[1]);                    
+                
+                } 
+                
+            // 馬単
+            }else if(bet.kind == kindArr[5]){
+                if(bet.comb == "通常"){                                                             
+                    if(buy[0] == ref.first && buy[1] == ref.second){
+                        refund = bet.money * ref.exacta / 100; 
+                        
+                    }
+                    buyText = String(buy[0]) + " > " + String(buy[1]);                    
+                
+                }  
+
+            // 3連複
+            }else if(bet.kind == kindArr[6]){  
+                if(bet.comb == "通常"){                                                             
+                    if(buy[0] == ref.first || buy[0] == ref.second || buy[0] == ref.third){
+                        if(buy[1] == ref.first || buy[1] == ref.second || buy[1] == ref.third){
+                            if(buy[2] == ref.first || buy[2] == ref.second || buy[2] == ref.third){
+                                refund = bet.money * ref.trio / 100;
+                            }
+                        }
+                        
+                    }
+                    buyText = String(buy[0]) + " - " + String(buy[1]) + " - " + String(buy[2]);                    
+                
+                }  
+                
+            // 3連単
+            }else if(bet.kind == kindArr[7]){
+                if(bet.comb == "通常"){                                                             
+                    if(buy[0] == ref.first && buy[1] == ref.second && buy[2] == ref.third){
+                        refund = bet.money * ref.trifecta / 100;
+                        
+                    }
+                    buyText = String(buy[0]) + " > " + String(buy[1]) + " > " + String(buy[2]);                    
+                
+                }
+                
+            }
+
+            print("Text", buyText);   
+            print('refund', refund);                     
+            
+            var raceIdStr = String(bet.raceId)
+            var yearStr = raceIdStr.substring(0, 4);
+            var year = Number(yearStr);
+            
+            const data = { 
+                id: bet.id,
+                raceId: bet.raceId,  
+                year: year,
+                racename: bet.racename,        
+                place: bet.place,
+                num: bet.num,
+                betId: bet.id,        
+                kind: bet.kind,
+                comb: bet.comb,
+                buy: buyText,
+                money: bet.money,
+                refund: refund,
+        
+            }                         
+            resolve(data);                       
+        }) 
+    })                                                         
+}
 
 // 払い戻しをホームページから取得
 function setRefund(url, raceId){    
@@ -111,8 +335,7 @@ function setRefund(url, raceId){
             ]               
 
         }).then(ref => {     
-            if(ref != ""){          
-                print("すでに結果があります", raceId);
+            if(ref != ""){                          
 
             }else{
                 // 結果を取得
@@ -230,13 +453,11 @@ function setRefund(url, raceId){
                     trio: trio,
                     trifecta: trifecta,
                 
-                });       
-                print("処理終了", raceId);          
-            }
+                });                            
+            }            
+            return   
         });          
-    });   
-
-    return   
+    });       
 }  
 
 // データを削除する
@@ -248,11 +469,12 @@ router.get('/delete/:id', function(req, res, next){
             id: req.params.id,
             userId: req.session.login.id
         },        
-    }).then(function(bet){
+    }).then(async function(bet){
+        var betsResult = await searchBetRefund(bet);                   
         var data = {
             title: '登録馬券の削除',
             id : req.params.id,
-            bet: bet
+            bet: betsResult,
         }
         res.render('bets/delete', data);
 
@@ -495,37 +717,38 @@ router.post('/select/:id', (req, res, next) => {
                 tmp = req.body.btn3;
             break;
         }            
-        
-        print('tmp', Array.isArray(tmp)); 
+                        
         if(Array.isArray(tmp)){
-            for(var j = 0; j < tmp.length; j++){
+            for(var j = 0; j < tmp.length; j++){                
                 switch(i){            
                     case 0:                 
-                        elm1.push(tmp[j]);  
-                        print('elm1', elm1)        
+                        elm1.push(Number(tmp[j]));                            
                     break;
                     case 1: 
-                        elm2.push(tmp[j]);
+                        elm2.push(Number(tmp[j]));
                     break;
                     case 2: 
-                        elm3.push(tmp[j]); 
-                    break;
-                }        
+                        elm3.push(Number(tmp[j])); 
+                    break;                    
+
+                }          
             }   
+                            
         }else{            
             switch(i){            
                 case 0:                 
-                    elm1 = tmp;                        
+                    elm1 = Number(tmp);                        
                 break;
                 case 1: 
-                    elm2 = tmp;  
+                    elm2 = Number(tmp);  
                 break;
                 case 2: 
-                    elm3 = tmp;  
+                    elm3 = Number(tmp);  
                 break;
             }        
         }             
-    }    
+    }
+    
     
     var elm = [elm1, elm2, elm3];
 
@@ -582,7 +805,7 @@ router.post('/select/:id', (req, res, next) => {
                     }
                 }
             }            
-        }else{
+        }else if(elmLen == 3){
             for(var i = 0; i < elm[0].length; i++){
                 for(var j = 0; j < elm[1].length; j++){
                     for(var k = 0; k < elm[2].length; k++){
@@ -628,7 +851,6 @@ router.post('/select/:id', (req, res, next) => {
             elmLen: dbBettingTicket.elmLen,
             combNum: dbBettingTicket.combNum,
         });
-        print("馬券登録完了", 'hoge');
 
         db.BettingTicket.findAll({   
             where: {userId: req.session.login.id},
@@ -703,10 +925,8 @@ router.post('/select/:id', (req, res, next) => {
             }                              
             if(tmp == undefined){
                 break;
-            }
-            print("tmp", tmp);
-            print("elmLen", elmLen);
-            // 買った馬を登録             
+            }            
+            // 買った馬を登録               
             for(var i = 0; i < elmLen; i++){
                 if(Array.isArray(elm[i])){
                     for(var j = 0; j < elm[i].length; j++){                  
@@ -774,13 +994,11 @@ router.post('/select/:id', (req, res, next) => {
                         num: dbHorse.num,
                         racename: dbHorse.racename,   
                         money: dbHorse.money, 
-                    })
-                    print("name", name);
-                    print("horseMoney", horseMoney);   
+                    })                    
                 }
-            }                                                        
-            name = "";
-            horseMoney = 0;
+                name = "";
+                horseMoney = 0;
+            }                                                                    
         }           
 
         betsScreen(req, res, err, dbBettingTicket, kind, comb);
@@ -1724,8 +1942,8 @@ function getHeader(k, c, cArr){
                 break;
                 // 2着ながし
                 case cArr[2]:
-                    header[0] = "1着";
-                    header[1] = "2着";
+                    header[0] = "2着";
+                    header[1] = "1着";
                     header[2] = ""; 
                 
                 break;
@@ -1831,15 +2049,15 @@ function getHeader(k, c, cArr){
                 // 1・3着ながし           
                 case cArr[5]:
                     header[0] = "1着";
-                    header[1] = "2着";
-                    header[2] = "3着"; 
+                    header[1] = "3着";
+                    header[2] = "2着"; 
                 
                 break;             
                 // 2・3着ながし   
                 case cArr[6]:
-                    header[0] = "1着";
-                    header[1] = "2着";
-                    header[2] = "3着"; 
+                    header[0] = "2着";
+                    header[1] = "3着";
+                    header[2] = "1着"; 
                 
                 break;             
                 // ボックス   
