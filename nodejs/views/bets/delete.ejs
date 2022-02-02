@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta http-equiv="content-type"
+        content="text/html; charset=UTF-8">
+    <title><%= title %></title>
+    <link rel="stylesheet" 
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
+    crossorigin="anonymous">
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+
+<body class="container">
+  <header>
+    <h1 class="display-4 text-primary">
+      <%= title %></h1>
+  </header>  
+  <div role="main">    
+      <table class="table">        
+        <tr>
+            <th>開催年度</th>
+            <td><%= bet.year %></td>
+        </tr>
+            <th>レース名</th>
+            <td><%= bet.racename %></td>
+        </tr>
+        <tr>
+            <th>開催場所</th>
+            <td><%= bet.place %></td>
+        </tr>
+        <tr>
+            <th>第何R</th>
+            <td><%= bet.num %></td>
+        </tr>
+        <tr>
+            <th>賭け金</th>
+            <td><%= bet.money %>円</td>
+        </tr>
+        <tr>
+            <th>式別</th>
+            <td><%= bet.kind %></td>
+        </tr>
+        <tr>
+            <th>方式</th>
+            <td><%= bet.comb %></td>
+        </tr> 
+        <tr>
+            <th>買い目</th>
+            <td><%= bet.buy %></td>
+        </tr>
+        <tr>
+            <th>払い戻し</th>
+            <td><%= bet.refund %>円</td>
+        </tr>            
+      </table>
+    
+    <form method="post" action="/bets/delete/<%= id %>">      
+      <input type="submit" value="削除" 
+        class="btn btn-primary">
+    </form>    
+    <p class="mt-4"><a href="/bets">&lt;&lt; 馬券戦績画面へ戻る</a></p>
+    
+
+    
+  </div>
+</body>
+</html>

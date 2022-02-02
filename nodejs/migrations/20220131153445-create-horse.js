@@ -1,7 +1,7 @@
 'use strict';
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('BettingTickets', {
+    await queryInterface.createTable('Horses', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -11,8 +11,17 @@ module.exports = {
       userId: {
         type: Sequelize.INTEGER
       },
+      betId: {
+        type: Sequelize.INTEGER
+      },
+      raceId: {
+        type: Sequelize.INTEGER
+      },
+      name: {
+        type: Sequelize.STRING
+      },
       date: {
-        type: Sequelize.DATE
+        type: Sequelize.INTEGER
       },
       place: {
         type: Sequelize.STRING
@@ -20,25 +29,10 @@ module.exports = {
       num: {
         type: Sequelize.INTEGER
       },
-      kind: {
+      racename: {
         type: Sequelize.STRING
       },
-      comb: {
-        type: Sequelize.STRING
-      },
-      first: {
-        type: Sequelize.INTEGER
-      },
-      second: {
-        type: Sequelize.INTEGER
-      },
-      third: {
-        type: Sequelize.INTEGER
-      },
-      bet: {
-        type: Sequelize.INTEGER
-      },
-      refund: {
+      money: {
         type: Sequelize.INTEGER
       },
       createdAt: {
@@ -52,6 +46,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('BettingTickets');
+    await queryInterface.dropTable('Horses');
   }
 };

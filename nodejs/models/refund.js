@@ -1,14 +1,6 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  const BettingTicket = sequelize.define('BettingTicket', {
-    userId: {
-      type: DataTypes.INTEGER,
-      validate: {
-        notEmpty: {
-          msg: "ユーザIDは必須です。"
-        }
-      }
-    },
+  const Refund = sequelize.define('Refund', {
     raceId: {
       type: DataTypes.INTEGER,
       validate: {
@@ -17,92 +9,99 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
-    date: {
+    first: {
       type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "開催日時は必須です。"
+          msg: "1着は必須です。"
+        }
+      }
+    },
+    second: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "2着は必須です。"
+        }
+      }
+    },
+    third: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "3着は必須です。"
+        }
+      }
+    },
+    win: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "単勝は必須です。"
         }
       }
     },
     place: {
-      type: DataTypes.STRING,
-      validate: {
-        notEmpty: {
-          msg: "開催場所は必須です。"
-        }
-      }
-    },
-    num: {
       type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "第何Rか必須です。"
+          msg: "複勝は必須です。"
         }
       }
     },
-    racename: {
-      type: DataTypes.STRING,
-      validate: {
-        notEmpty: {
-          msg: "レース名は必須です。"
-        }
-      }
-    },
-    money: {
+    bracket: {
       type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "賭け金は必須です。"
+          msg: "枠連は必須です。"
         }
       }
     },
-    kind: {
-      type: DataTypes.STRING,
+    quinella: {
+      type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "馬券の式別は必須です。"
+          msg: "馬連は必須です。"
         }
       }
     },
-    comb: {
-      type: DataTypes.STRING,
+    wid: {
+      type: DataTypes.INTEGER,
       validate: {
         notEmpty: {
-          msg: "馬券の方式は必須です。"
+          msg: "ワイドは必須です。"
+        }
+      }
+    },
+    exacta: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "馬単は必須です。"
+        }
+      }
+    },
+    trio: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "3連複は必須です。"
+        }
+      }
+    },
+    trifecta: {
+      type: DataTypes.INTEGER,
+      validate: {
+        notEmpty: {
+          msg: "3連単は必須です。"
         }
       }
     },    
-    elm: {
-      type: DataTypes.INTEGER,
-      validate: {
-        notEmpty: {
-          msg: "買い目は必須です。"
-        }
-      }
-    },
-    elmLen: {
-      type: DataTypes.INTEGER,
-      validate: {
-        notEmpty: {
-          msg: "買い目の長さは必須です。"
-        }
-      }
-    },
-    combNum: {
-      type: DataTypes.INTEGER,
-      validate: {
-        notEmpty: {
-          msg: "組み合わせ数は必須です。"
-        }
-      }
-    },
   }, {});
 
-  BettingTicket.associate = function(models){
-    BettingTicket.belongsTo(models.User);    
+  Refund.associate = function(models){    
 
   };
-  return BettingTicket;
+  return Refund;
 
 };
